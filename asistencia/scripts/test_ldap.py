@@ -32,7 +32,7 @@ def test_ldap_connection():
 
 
             for entry in conn.entries[:10]:  # Mostrar primeros 3
-                print(entry.entry_dn)
+                print(entry.attributes)
 
 
         else:
