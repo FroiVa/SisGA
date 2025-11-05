@@ -32,7 +32,14 @@ def test_ldap_connection():
 
 
             for entry in conn.entries[:10]:  # Mostrar primeros 3
-                print(entry.attributes)
+                nombre = entry.cn
+                correo = entry.Correo
+                area = entry.Area
+                ci = entry.CI
+                codDep = entry.CodigoDeDependencia
+                codArea = entry.CodigoDeArea
+
+                print(entry.entry_dn + ' ' +nombre + ' ' +  correo + ' ' + area + ' ' + ci + ' ' + codDep + ' ' +  codArea)
 
 
         else:
