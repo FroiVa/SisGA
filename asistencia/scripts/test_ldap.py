@@ -31,8 +31,8 @@ def test_ldap_connection():
             print(f"📊 Usuarios encontrados: {len(conn.entries)}")
 
 
-            for entry in conn.entries[:3]:  # Mostrar primeros 3
-                print(entry)
+            for entry in conn.entries[:10]:  # Mostrar primeros 3
+                print(entry.entry_dn)
 
 
         else:
