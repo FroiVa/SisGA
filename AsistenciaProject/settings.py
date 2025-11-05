@@ -145,10 +145,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configuración LDAD
 
-AUTH_LDAP_SERVER_URI = os.getenv('LDAP_SERVER_URI', 'ldap://ldap.uh.cu:389')
-AUTH_LDAP_BIND_DN = os.getenv('LDAP_BIND_DN', 'cn=admin,dc=uh,dc=cu')
-AUTH_LDAP_BIND_PASSWORD = os.getenv('LDAP_BIND_PASSWORD', 'killdirectory')
-
 LDAP_CONFIG = {
     'SERVER_URI': os.getenv('LDAP_SERVER_URI', 'ldap://ldap.uh.cu:389'),
     'BIND_DN': os.getenv('LDAP_BIND_DN', 'cn=admin,dc=uh,dc=cu'),
