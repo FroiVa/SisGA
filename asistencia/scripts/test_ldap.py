@@ -27,11 +27,11 @@ def test_ldap_connection():
             print("✅ Conexión LDAP exitosa!")
 
             # Buscar usuarios
-            conn.search(ldap_config['USER_BASE'], '(objectclass=*)')
+            conn.search(ldap_config['USER_BASE'], '(objectclass=*)', attributes=['cn', 'Correo', 'Area', 'CI', 'CodigoDeDependencia', 'CodigoDelArea'])
             print(f"📊 Usuarios encontrados: {len(conn.entries)}")
 
 
-            for entry in conn.entries[3]:  # Mostrar primeros 3
+            for entry in conn.entries[:3]:  # Mostrar primeros 3
                 print(entry)
 
 
