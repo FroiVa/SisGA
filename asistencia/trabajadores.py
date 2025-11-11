@@ -2,6 +2,7 @@ import os
 import sys
 import django
 
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AsistenciaProject.settings')
 django.setup()
@@ -23,23 +24,25 @@ def obtener_usuarios_ldap3(codigo_area):
         base_dn = ldap_config['USER_BASE']
         filtro = f"(&(objectClass=Trabajador)(CodigoDeDependencia={codigo_area}))"
 
-        atributos = ['uid', 'cn', 'sn', 'Correo', 'Area', 'CI', 'CodigoDeDependencia', 'CodigoDelArea']
+        atributos = ['*']
+        # 'uid', 'cn', 'sn', 'Correo', 'Area', 'CI', 'CodigoDeDependencia', 'CodigoDelArea', 'Assets'
 
         conn.search(base_dn, filtro, attributes=atributos)
 
         usuarios = []
         for entry in conn.entries:
-            usuario = {
-                'uid': str(entry.uid) if entry.uid else '',
-                'cn': str(entry.cn) if entry.cn else '',
-                'sn': str(entry.sn) if entry.sn else '',
-                'email': str(entry.Correo) if entry.Correo else '',
-                'area': str(entry.Area) if entry.Area else '',
-                'ci': str(entry.CI) if entry.CI else '',
-                'dependencia': str(entry.CodigoDeDependencia) if entry.CodigoDeDependencia else '',
-                'codarea': str(entry.CodigoDelArea) if entry.CodigoDelArea else '',
-            }
-            usuarios.append(usuario)
+            # usuario = {
+            #     'uid': str(entry.uid) if entry.uid else '',
+            #     'cn': str(entry.cn) if entry.cn else '',
+            #     'sn': str(entry.sn) if entry.sn else '',
+            #     'email': str(entry.Correo) if entry.Correo else '',
+            #     'area': str(entry.Area) if entry.Area else '',
+            #     'ci': str(entry.CI) if entry.CI else '',
+            #     'dependencia': str(entry.CodigoDeDependencia) if entry.CodigoDeDependencia else '',
+            #     'codarea': str(entry.CodigoDelArea) if entry.CodigoDelArea else '',
+            #     'assets': str(entry.Assets) if entry.Assets else '',
+            # }
+            usuarios.append(entry)
 
         return usuarios
 
