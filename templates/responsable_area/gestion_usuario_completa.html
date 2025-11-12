@@ -1,0 +1,394 @@
+<!-- templates/responsable_area/gestion_usuario_completa.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-person-gear"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="usuarioForm">
+                        {% csrf_token %}
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Información Básica del Usuario -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">
+                                    <i class="bi bi-info-circle"></i>
+                                    Información Básica
+                                </h5>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ user_form.username.id_for_label }}" class="form-label">
+                                        <strong>Nombre de Usuario *</strong>
+                                    </label>
+                                    {{ user_form.username }}
+                                    {% if user_form.username.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in user_form.username.errors %}
+                                                <i class="bi bi-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Usuario para inicio de sesión. Solo letras, números, puntos y guiones bajos.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ user_form.email.id_for_label }}" class="form-label">
+                                        <strong>Email</strong>
+                                    </label>
+                                    {{ user_form.email }}
+                                    {% if user_form.email.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in user_form.email.errors %}
+                                                <i class="bi bi-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ user_form.first_name.id_for_label }}" class="form-label">
+                                        <strong>Nombre</strong>
+                                    </label>
+                                    {{ user_form.first_name }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ user_form.last_name.id_for_label }}" class="form-label">
+                                        <strong>Apellido</strong>
+                                    </label>
+                                    {{ user_form.last_name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contraseña (Opcional) -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">
+                                    <i class="bi bi-shield-lock"></i>
+                                    Contraseña (Opcional)
+                                </h5>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Información:</strong> Si el usuario se autenticará via LDAP, no es necesario establecer contraseña.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_password1" class="form-label">Contraseña</label>
+                                    <input type="password" name="password1" id="id_password1" class="form-control"
+                                           placeholder="Dejar vacío para LDAP">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_password2" class="form-label">Confirmar Contraseña</label>
+                                    <input type="password" name="password2" id="id_password2" class="form-control"
+                                           placeholder="Confirmar contraseña">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Asignación de Áreas -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">
+                                    <i class="bi bi-building"></i>
+                                    Áreas a Cargo
+                                </h5>
+
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <strong>Nota:</strong> Seleccione las áreas para las que este usuario será responsable.
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th width="50">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="selectAllAreas">
+                                                        <label class="form-check-label" for="selectAllAreas">
+                                                            Todas
+                                                        </label>
+                                                    </div>
+                                                </th>
+                                                <th>Código</th>
+                                                <th>Nombre del Área</th>
+                                                <th>Unidad Padre</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for area in areas %}
+                                            <tr>
+                                                <td>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input area-checkbox"
+                                                               type="checkbox"
+                                                               name="areas"
+                                                               value="{{ area.id }}"
+                                                               id="area_{{ area.id }}"
+                                                               {% if area.id in areas_actuales %}checked{% endif %}>
+                                                        <label class="form-check-label" for="area_{{ area.id }}"></label>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ area.cod_area }}</strong>
+                                                </td>
+                                                <td>{{ area.nombre }}</td>
+                                                <td>
+                                                    <small class="text-muted">{{ area.unidad_padre }}</small>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted py-4">
+                                                    <i class="bi bi-inbox"></i> No hay áreas registradas
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle"></i>
+                                        Áreas seleccionadas: <span id="contadorAreas">0</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información del Usuario si está editando -->
+                        {% if usuario %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-clock-history"></i>
+                                            Información Adicional
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <strong>Fecha Registro:</strong><br>
+                                                {{ usuario.date_joined|date:"d/m/Y H:i" }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Último Login:</strong><br>
+                                                {% if usuario.last_login %}
+                                                    {{ usuario.last_login|date:"d/m/Y H:i" }}
+                                                {% else %}
+                                                    <span class="text-muted">Nunca</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Áreas Actuales:</strong><br>
+                                                {{ areas_actuales|length }} área(s)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Botones de Acción -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a href="{% url 'responsable_area_list' %}" class="btn btn-secondary">
+                                            <i class="bi bi-arrow-left"></i>
+                                            Volver al Listado
+                                        </a>
+
+                                        {% if usuario %}
+                                        <a href="{% url 'gestion_usuario_areas' usuario.id %}" class="btn btn-outline-info ms-2">
+                                            <i class="bi bi-diagram-3"></i>
+                                            Gestionar Áreas
+                                        </a>
+                                        {% endif %}
+                                    </div>
+
+                                    <div>
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="bi bi-check-circle"></i>
+                                            {% if usuario %}Actualizar Usuario{% else %}Crear Usuario{% endif %}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select/Deselect todas las áreas
+    const selectAllAreas = document.getElementById('selectAllAreas');
+    const areaCheckboxes = document.querySelectorAll('.area-checkbox');
+    const contadorAreas = document.getElementById('contadorAreas');
+
+    function actualizarContador() {
+        const seleccionadas = document.querySelectorAll('.area-checkbox:checked').length;
+        contadorAreas.textContent = seleccionadas;
+    }
+
+    // Inicializar contador
+    actualizarContador();
+
+    // Event listener para select all
+    if (selectAllAreas) {
+        selectAllAreas.addEventListener('change', function() {
+            areaCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            actualizarContador();
+        });
+    }
+
+    // Event listeners para checkboxes individuales
+    areaCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            actualizarContador();
+
+            // Si se deselecciona una, quitar el "select all"
+            if (selectAllAreas && !this.checked) {
+                selectAllAreas.checked = false;
+            }
+
+            // Si todas están seleccionadas, marcar "select all"
+            if (selectAllAreas) {
+                const todasSeleccionadas = Array.from(areaCheckboxes).every(cb => cb.checked);
+                selectAllAreas.checked = todasSeleccionadas;
+            }
+        });
+    });
+
+    // Validación del formulario
+    const form = document.getElementById('usuarioForm');
+    form.addEventListener('submit', function(e) {
+        const username = document.getElementById('{{ user_form.username.id_for_label }}').value.trim();
+        const password1 = document.getElementById('id_password1').value;
+        const password2 = document.getElementById('id_password2').value;
+
+        // Validar username
+        if (!username) {
+            e.preventDefault();
+            alert('El nombre de usuario es obligatorio.');
+            return;
+        }
+
+        // Validar contraseñas
+        if (password1 || password2) {
+            if (password1 !== password2) {
+                e.preventDefault();
+                alert('Las contraseñas no coinciden.');
+                return;
+            }
+
+            if (password1.length < 8) {
+                e.preventDefault();
+                alert('La contraseña debe tener al menos 8 caracteres.');
+                return;
+            }
+        }
+
+        // Validar que se haya seleccionado al menos un área
+        const areasSeleccionadas = document.querySelectorAll('.area-checkbox:checked').length;
+        if (areasSeleccionadas === 0) {
+            if (!confirm('No ha seleccionado ninguna área. ¿Desea continuar?')) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+
+    // Validación en tiempo real del username
+    const usernameField = document.getElementById('{{ user_form.username.id_for_label }}');
+    if (usernameField) {
+        usernameField.addEventListener('blur', function() {
+            const username = this.value.trim();
+            if (username && !/^[a-zA-Z0-9_\.]+$/.test(username)) {
+                this.classList.add('is-invalid');
+                // Crear mensaje de error si no existe
+                if (!this.nextElementSibling.classList.contains('text-danger')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-danger small mt-1';
+                    errorDiv.innerHTML = '<i class="bi bi-exclamation-circle"></i> Solo letras, números, puntos y guiones bajos.';
+                    this.parentNode.insertBefore(errorDiv, this.nextElementSibling);
+                }
+            } else {
+                this.classList.remove('is-invalid');
+                // Remover mensaje de error si existe
+                const errorDiv = this.nextElementSibling;
+                if (errorDiv && errorDiv.classList.contains('text-danger')) {
+                    errorDiv.remove();
+                }
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.card-header {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.area-checkbox:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.form-check-input:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+</style>
+{% endblock %}

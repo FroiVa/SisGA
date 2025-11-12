@@ -1,0 +1,66 @@
+<!-- templates/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Dashboard</h2>
+                <span class="text-muted">Bienvenido, {{ user.get_full_name|default:user.username }}</span>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Áreas a tu cargo</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if areas_responsable %}
+                                <ul class="list-group">
+                                    {% for area in areas_responsable %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ area.area.nombre }}
+                                            <span class="badge bg-{% if area.activo %}success{% else %}secondary{% endif %}">
+                                                {% if area.activo %}Activo{% else %}Inactivo{% endif %}
+                                            </span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No tienes áreas asignadas.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Acciones rápidas</h5>
+                        </div>
+                        <div class="card-body">
+                            <a href="{% url 'admin:index' %}" class="btn btn-outline-primary mb-2">
+                                Administración
+                            </a>
+                            <a href="{% url 'logout' %}" class="btn btn-outline-danger mb-2">
+                                Cerrar Sesión
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

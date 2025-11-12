@@ -1,0 +1,71 @@
+<!-- templates/responsable_area/buscar_crear_usuario.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Buscar o Crear Usuario</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    {{ form.username.label_tag }}
+                                    {{ form.username }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.accion.label_tag }}
+                                    <div class="mt-2">
+                                        {% for choice in form.accion %}
+                                            <div class="form-check">
+                                                {{ choice.tag }}
+                                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                    {{ choice.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Buscar/Crear Usuario
+                            </button>
+                        </div>
+                    </form>
+
+                    {% if usuario %}
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h5>Usuario: {{ usuario.username }}</h5>
+                        <p><strong>Nombre:</strong> {{ usuario.first_name }} {{ usuario.last_name }}</p>
+                        <p><strong>Email:</strong> {{ usuario.email|default:"No especificado" }}</p>
+                        <p><strong>Estado:</strong>
+                            <span class="badge bg-success">Activo</span>
+                        </p>
+
+                        <div class="mt-3">
+                            <a href="{% url 'responsable_area_create' %}" class="btn btn-success">
+                                <i class="bi bi-person-plus"></i> Asignar Áreas
+                            </a>
+                            <a href="{% url 'editar_usuario' usuario.id %}" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Editar Usuario
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,420 @@
+<!-- templates/responsable_area/asignacion_rapida.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-lightning-charge"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Asignación Rápida:</strong> Complete los campos para asignar un responsable a un área.
+                        El usuario se creará automáticamente si no existe.
+                    </div>
+
+                    <form method="post" id="asignacionRapidaForm">
+                        {% csrf_token %}
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Campo de Usuario -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                                        <strong>Usuario *</strong>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-person"></i>
+                                        </span>
+                                        {{ form.username }}
+                                    </div>
+                                    {% if form.username.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.username.errors %}
+                                                <i class="bi bi-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Ingrese el nombre de usuario. Si no existe, se creará automáticamente.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campo de Área -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.area.id_for_label }}" class="form-label">
+                                        <strong>Área *</strong>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-building"></i>
+                                        </span>
+                                        {{ form.area }}
+                                    </div>
+                                    {% if form.area.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.area.errors %}
+                                                <i class="bi bi-exclamation-circle"></i> {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Opción de Creación -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="form-check form-switch">
+                                    {{ form.crear_usuario }}
+                                    <label class="form-check-label" for="{{ form.crear_usuario.id_for_label }}">
+                                        <strong>{{ form.crear_usuario.label }}</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    Si está activado, el usuario se creará automáticamente si no existe.
+                                    Si está desactivado, mostrará error si el usuario no existe.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información de Usuario (se llena via AJAX) -->
+                        <div id="infoUsuario" class="row mb-4" style="display: none;">
+                            <div class="col-12">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white py-2">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-person-check"></i>
+                                            Información del Usuario
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="usuarioContent">
+                                            <!-- Se llena dinámicamente via AJAX -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información del Área -->
+                        <div id="infoArea" class="row mb-4" style="display: none;">
+                            <div class="col-12">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark py-2">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-building"></i>
+                                            Información del Área
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="areaContent">
+                                            <!-- Se llena dinámicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                                    <div>
+                                        <a href="{% url 'responsable_area_list' %}" class="btn btn-secondary">
+                                            <i class="bi bi-arrow-left"></i>
+                                            Volver al Listado
+                                        </a>
+                                        <a href="{% url 'responsable_area_create' %}" class="btn btn-outline-primary ms-2">
+                                            <i class="bi bi-person-plus"></i>
+                                            Asignación Completa
+                                        </a>
+                                    </div>
+
+                                    <div>
+                                        <button type="button" id="btnVerificar" class="btn btn-info me-2">
+                                            <i class="bi bi-search"></i>
+                                            Verificar
+                                        </button>
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="bi bi-lightning-charge"></i>
+                                            Asignar Rápidamente
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Panel de Ayuda -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="bi bi-question-circle"></i>
+                        ¿Cómo funciona?
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-check-circle text-success"></i> Usuario Existe</h6>
+                            <ul class="small">
+                                <li>Se verifica que el usuario esté activo</li>
+                                <li>Se asigna el área seleccionada</li>
+                                <li>Si ya era responsable, se reactiva la asignación</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-plus-circle text-primary"></i> Usuario Nuevo</h6>
+                            <ul class="small">
+                                <li>Se crea el usuario automáticamente</li>
+                                <li>No se establece contraseña (para LDAP)</li>
+                                <li>Se asigna el área seleccionada</li>
+                                <li>El usuario queda activo inmediatamente</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('asignacionRapidaForm');
+    const usernameField = document.getElementById('{{ form.username.id_for_label }}');
+    const areaField = document.getElementById('{{ form.area.id_for_label }}');
+    const btnVerificar = document.getElementById('btnVerificar');
+    const infoUsuario = document.getElementById('infoUsuario');
+    const infoArea = document.getElementById('infoArea');
+    const usuarioContent = document.getElementById('usuarioContent');
+    const areaContent = document.getElementById('areaContent');
+
+    // Función para verificar usuario via AJAX
+    function verificarUsuario() {
+        const username = usernameField.value.trim();
+
+        if (!username) {
+            alert('Por favor, ingrese un nombre de usuario.');
+            return;
+        }
+
+        // Mostrar loading
+        btnVerificar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Verificando...';
+        btnVerificar.disabled = true;
+
+        // Realizar petición AJAX
+        fetch(`{% url 'buscar_usuario_ajax' %}?username=${encodeURIComponent(username)}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.encontrado) {
+                    // Usuario existe
+                    usuarioContent.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="text-success">✓ Usuario Encontrado</h6>
+                                <p class="mb-1"><strong>Usuario:</strong> ${data.usuario.username}</p>
+                                <p class="mb-1"><strong>Nombre:</strong> ${data.usuario.first_name || 'No especificado'} ${data.usuario.last_name || ''}</p>
+                                <p class="mb-0"><strong>Email:</strong> ${data.usuario.email || 'No especificado'}</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="badge bg-success">ACTIVO</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Usuario no existe
+                    usuarioContent.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="text-warning">⚠ Usuario No Encontrado</h6>
+                                <p class="mb-1">El usuario <strong>"${username}"</strong> no existe en el sistema.</p>
+                                <p class="mb-0">Se creará automáticamente al guardar.</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="badge bg-warning">NUEVO</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                infoUsuario.style.display = 'block';
+            } else {
+                alert('Error en la verificación: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al verificar el usuario.');
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnVerificar.innerHTML = '<i class="bi bi-search"></i> Verificar';
+            btnVerificar.disabled = false;
+        });
+    }
+
+    // Función para mostrar información del área
+    function mostrarInfoArea() {
+        const areaId = areaField.value;
+        const areaText = areaField.options[areaField.selectedIndex].text;
+
+        if (areaId) {
+            areaContent.innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6 class="text-primary">Área Seleccionada</h6>
+                        <p class="mb-0"><strong>${areaText}</strong></p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-primary">ASIGNADA</span>
+                    </div>
+                </div>
+            `;
+            infoArea.style.display = 'block';
+        } else {
+            infoArea.style.display = 'none';
+        }
+    }
+
+    // Event Listeners
+    btnVerificar.addEventListener('click', verificarUsuario);
+    areaField.addEventListener('change', mostrarInfoArea);
+
+    // Validación del formulario
+    form.addEventListener('submit', function(e) {
+        const username = usernameField.value.trim();
+        const areaId = areaField.value;
+
+        if (!username) {
+            e.preventDefault();
+            alert('El nombre de usuario es obligatorio.');
+            usernameField.focus();
+            return;
+        }
+
+        if (!areaId) {
+            e.preventDefault();
+            alert('Debe seleccionar un área.');
+            areaField.focus();
+            return;
+        }
+
+        // Validar formato del username
+        if (!/^[a-zA-Z0-9_\.\-]+$/.test(username)) {
+            e.preventDefault();
+            alert('El nombre de usuario contiene caracteres no válidos. Use solo letras, números, puntos, guiones y guiones bajos.');
+            usernameField.focus();
+            return;
+        }
+
+        // Mostrar confirmación para usuarios nuevos
+        if (!document.querySelector('.text-success')) {
+            if (!confirm(`¿Está seguro de crear el usuario "${username}" y asignarlo al área seleccionada?`)) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+
+    // Auto-verificar cuando se pierde el foco del username
+    usernameField.addEventListener('blur', function() {
+        if (this.value.trim()) {
+            verificarUsuario();
+        }
+    });
+
+    // Auto-mostrar información del área si ya hay una seleccionada
+    if (areaField.value) {
+        mostrarInfoArea();
+    }
+
+    // Efectos visuales
+    usernameField.addEventListener('focus', function() {
+        this.parentElement.classList.add('focus-ring');
+    });
+
+    usernameField.addEventListener('blur', function() {
+        this.parentElement.classList.remove('focus-ring');
+    });
+});
+</script>
+
+<style>
+.card-header {
+    background: linear-gradient(135deg, #198754 0%, #0f5132 100%);
+}
+
+.input-group-text {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+}
+
+.focus-ring {
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+    border-radius: 0.375rem;
+}
+
+#infoUsuario .card,
+#infoArea .card {
+    border-left: 4px solid;
+}
+
+#infoUsuario .card {
+    border-left-color: #0dcaf0;
+}
+
+#infoArea .card {
+    border-left-color: #ffc107;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754 0%, #157347 100%);
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #157347 0%, #0f5132 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+</style>
+{% endblock %}

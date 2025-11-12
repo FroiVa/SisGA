@@ -1,0 +1,182 @@
+<!-- templates/responsable_area/form_con_creacion.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="responsableForm">
+                        {% csrf_token %}
+
+                        <!-- Selección de tipo de usuario -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5>1. Seleccionar Usuario</h5>
+                                {{ form.tipo_usuario.label_tag }}
+                                <div class="mt-2">
+                                    {% for choice in form.tipo_usuario %}
+                                        <div class="form-check form-check-inline">
+                                            {{ choice.tag }}
+                                            <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                {{ choice.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel para usuario existente -->
+                        <div id="panelExistente" class="usuario-panel">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        {{ form.usuario_existente.label_tag }}
+                                        {{ form.usuario_existente }}
+                                        {% if form.usuario_existente.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.usuario_existente.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <a href="{% url 'buscar_crear_usuario' %}"
+                                       class="btn btn-outline-primary w-100"
+                                       target="_blank">
+                                        <i class="bi bi-search"></i> Buscar/Crear
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel para nuevo usuario -->
+                        <div id="panelNuevo" class="usuario-panel" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.nuevo_username.label_tag }}
+                                        {{ form.nuevo_username }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.nuevo_email.label_tag }}
+                                        {{ form.nuevo_email }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.nuevo_first_name.label_tag }}
+                                        {{ form.nuevo_first_name }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.nuevo_last_name.label_tag }}
+                                        {{ form.nuevo_last_name }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selección de áreas -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5>2. Seleccionar Áreas</h5>
+                                <div class="mb-3">
+                                    {{ form.areas.label_tag }}
+                                    {{ form.areas }}
+                                    {% if form.areas.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.areas.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5>3. Configuración</h5>
+                                <div class="form-check form-switch">
+                                    {{ form.activo }}
+                                    <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                                        {{ form.activo.label }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+{#                            <a href="{% url 'responsable_area_list' %}" class="btn btn-secondary me-md-2">#}
+{#                                <i class="bi bi-arrow-left"></i> Cancelar#}
+{#                            </a>#}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Guardar Asignación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoUsuarioRadios = document.querySelectorAll('input[name="tipo_usuario"]');
+    const panelExistente = document.getElementById('panelExistente');
+    const panelNuevo = document.getElementById('panelNuevo');
+
+    function togglePanels() {
+        const tipoSeleccionado = document.querySelector('input[name="tipo_usuario"]:checked').value;
+
+        if (tipoSeleccionado === 'existente') {
+            panelExistente.style.display = 'block';
+            panelNuevo.style.display = 'none';
+            // Hacer requeridos los campos del panel existente
+            document.getElementById('id_usuario_existente').required = true;
+            document.getElementById('id_nuevo_username').required = false;
+        } else {
+            panelExistente.style.display = 'none';
+            panelNuevo.style.display = 'block';
+            // Hacer requeridos los campos del panel nuevo
+            document.getElementById('id_usuario_existente').required = false;
+            document.getElementById('id_nuevo_username').required = true;
+        }
+    }
+
+    // Inicializar
+    togglePanels();
+
+    // Agregar event listeners
+    tipoUsuarioRadios.forEach(radio => {
+        radio.addEventListener('change', togglePanels);
+    });
+});
+</script>
+
+<style>
+.usuario-panel {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

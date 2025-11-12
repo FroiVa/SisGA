@@ -1,13 +1,13 @@
 import os
 import sys
 import django
-from .models import Area
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AsistenciaProject.settings')
 django.setup()
 from ldap3 import Server, Connection, ALL
-
+from asistencia.models import Area
 
 def obtener_areas():
     from django.conf import settings
@@ -22,7 +22,7 @@ def obtener_areas():
                           auto_bind=True)
 
         base_dn = ldap_config['USER_BASE']
-        filtro = f"(&(objectClass=Trabajador)(CodigoDeDependencia=A0000-2))"
+        filtro = f"(&(objectClass=Trabajador))"
 
         atributos = ['Area', 'CodigoDeDependencia', 'CodigoDelArea', 'Assets']
         #
@@ -38,14 +38,6 @@ def obtener_areas():
                 'assets': str(entry.Assets) if entry.Assets else '',
             }
 
-
-            area = Area()
-            area.cod_area = area_entry['codarea']
-            area.nombre = area_entry['nombre']
-            area.unidad_padre = area_entry['dependencia']
-            area.assets = area_entry['assets']
-            area.save()
-
             if area_entry not in areas:
                 areas.append(area_entry)
 
@@ -58,6 +50,12 @@ def obtener_areas():
 
 
 if __name__ == "__main__":
-    users = obtener_areas()
-    for user in users:
-        print(user)
+    areas = obtener_areas()
+    for a in areas:
+        area = Area()
+        area.cod_area = a['codarea']
+        area.nombre = a['nombre']
+        area.unidad_padre = a['dependencia']
+        area.assets = a['assets']
+        area.save()
+        print(a)

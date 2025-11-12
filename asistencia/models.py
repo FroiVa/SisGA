@@ -1,10 +1,4 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
+
 import datetime
 
 from django.db import models
@@ -18,14 +12,15 @@ from django.db.models import Q
 class Area(models.Model):
     """Modelo para representar las áreas/departamentos de la organización"""
     cod_area = models.CharField(max_length=20)
-    nombre = models.CharField(max_length=100, unique=True)
+    nombre = models.CharField(max_length=100)
     unidad_padre = models.CharField(max_length=20)
     assets = models.IntegerField()
 
     class Meta:
         verbose_name = 'Área'
         verbose_name_plural = 'Áreas'
-        ordering = ['nombre']
+        ordering = ['assets', 'cod_area', 'nombre']
+        db_table = 'area'
 
     def __str__(self):
         return self.nombre
@@ -43,9 +38,25 @@ class ResponsableArea(models.Model):
         verbose_name_plural = 'Responsables de Áreas'
         unique_together = ['usuario', 'area']
         ordering = ['area__nombre', 'usuario__username']
+        db_table = 'responsable_area'
 
     def __str__(self):
         return f"{self.usuario.username} - {self.area.nombre}"
+
+    @classmethod
+    def get_responsables_activos_area(cls, area):
+        """Obtiene todos los responsables activos de un área"""
+        return cls.objects.filter(area=area, activo=True).select_related('usuario')
+
+    @classmethod
+    def get_areas_responsable_usuario(cls, usuario):
+        """Obtiene todas las áreas de las que un usuario es responsable"""
+        return cls.objects.filter(usuario=usuario, activo=True).select_related('area')
+
+    @classmethod
+    def es_responsable_area(cls, usuario, area):
+        """Verifica si un usuario es responsable de un área específica"""
+        return cls.objects.filter(usuario=usuario, area=area, activo=True).exists()
 
 
 CHOICES = {
@@ -61,8 +72,13 @@ CHOICES = {
     'Licencia especial': 'Licencia especial',
 }
 
-class Incidencias(models.Model):
+class Incidencia(models.Model):
     area = models.CharField(max_length=15, help_text='FK a RhUnidadesOrganizativas', db_column='Area')
     empleado = models.CharField(max_length=100, help_text='FK a EmpleadosGral', db_column='Empleado')
     estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado')
     fecha_asistencia = models.DateField(db_column='Fecha_Asistencia', default=datetime.date.today)
+
+    class Meta:
+        verbose_name = 'Incidencia'
+        verbose_name_plural = 'Incidencias'
+        db_table = 'incidencia'

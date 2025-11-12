@@ -79,8 +79,8 @@ DATABASES = {
     'default': {# PostgreSQL - base de datos principal
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'asistencia',
-        'USER': 'asistencia',
-        'PASSWORD': 'asistencia2025*',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
         'HOST': 'localhost',
         'PORT': '5432',
     },
@@ -138,10 +138,18 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+# En producción
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_CHARSET = 'utf-8'
 
 # Configuración LDAD
 
@@ -153,7 +161,19 @@ LDAP_CONFIG = {
     'GROUP_BASE': os.getenv('LDAP_GROUP_BASE', 'ou=Trabajadores,dc=uh,dc=cu'),
 }
 
+
 AUTHENTICATION_BACKENDS = [
-    'asistencia.authentication_backends.LDAPBackend',
+    'asistencia.authentication_backends.LDAP3Backend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+
+# Configuración de login
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'  # Ajusta según tu aplicación
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+
+# Configuración de sesión
+SESSION_COOKIE_AGE = 3600  # 1 hora en segundos
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
