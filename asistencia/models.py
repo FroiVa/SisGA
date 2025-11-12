@@ -74,6 +74,7 @@ CHOICES = {
 
 class Incidencia(models.Model):
     area = models.CharField(max_length=15, help_text='FK a RhUnidadesOrganizativas', db_column='Area')
+    uid = models.CharField(max_length=100, help_text='Usuario LDAP', db_column='UID')
     empleado = models.CharField(max_length=100, help_text='FK a EmpleadosGral', db_column='Empleado')
     estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado')
     fecha_asistencia = models.DateField(db_column='Fecha_Asistencia', default=datetime.date.today)
