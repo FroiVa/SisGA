@@ -1,0 +1,103 @@
+<!-- templates/responsable_area/buscar_usuarios.html -->
+{% extends 'base.html' %}
+
+{% block title %}Buscar Usuarios y sus Áreas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-search"></i>
+                        Buscar Usuarios y sus Áreas
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Formulario de búsqueda -->
+                    <form method="get" class="mb-4">
+                        <div class="input-group input-group-lg">
+                            <input type="text"
+                                   name="q"
+                                   class="form-control"
+                                   placeholder="Buscar por nombre, usuario o email..."
+                                   value="{{ query }}"
+                                   autofocus>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                        <div class="form-text mt-2">
+                            Puede buscar por nombre de usuario, nombre completo o dirección de email.
+                        </div>
+                    </form>
+
+                    <!-- Resultados -->
+                    {% if query %}
+                        <div class="alert alert-info">
+                            Se encontraron <strong>{{ total_resultados }}</strong> resultados para "{{ query }}"
+                        </div>
+
+                        {% if resultados %}
+                            <div class="row">
+                                {% for resultado in resultados %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h5 class="card-title">
+                                                        {{ resultado.nombre_completo|default:resultado.username }}
+                                                    </h5>
+                                                    <p class="card-text mb-1">
+                                                        <strong>Usuario:</strong> {{ resultado.username }}
+                                                    </p>
+                                                    <p class="card-text mb-1">
+                                                        <strong>Email:</strong> {{ resultado.email|default:"No especificado" }}
+                                                    </p>
+                                                    <p class="card-text">
+                                                        <strong>Áreas:</strong>
+                                                        <span class="badge bg-primary">{{ resultado.total_areas }}</span>
+                                                    </p>
+                                                </div>
+                                                <div class="text-end">
+                                                    <a href="{{ resultado.url_detalle }}"
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-eye"></i> Ver Áreas
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning text-center">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                No se encontraron usuarios que coincidan con "{{ query }}"
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-light text-center">
+                            <i class="bi bi-info-circle"></i>
+                            Ingrese un término de búsqueda para encontrar usuarios y ver sus áreas asignadas.
+                        </div>
+                    {% endif %}
+
+                    <!-- Botones de acción -->
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'estadisticas_areas_usuarios' %}" class="btn btn-info">
+                            <i class="bi bi-graph-up"></i> Ver Estadísticas
+                        </a>
+                        <a href="{% url 'responsable_area_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Volver a Responsables
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

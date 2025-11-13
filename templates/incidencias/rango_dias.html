@@ -1,0 +1,556 @@
+<!-- templates/incidencias/rango_dias.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-calendar-range"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Instrucciones:</strong> Ingrese los empleados y seleccione el rango de días.
+                        El sistema creará incidencias para cada empleado en cada día del rango.
+                    </div>
+
+                    <form method="post" id="rangoDiasForm">
+                        {% csrf_token %}
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Columna izquierda - Configuración básica -->
+                            <div class="col-md-4">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Configuración Básica</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Área -->
+                                        <div class="mb-3">
+                                            {{ form.area.label_tag }}
+                                            {{ form.area }}
+                                            {% if form.area.errors %}
+                                                <div class="text-danger small">{{ form.area.errors }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Estado -->
+                                        <div class="mb-3">
+                                            {{ form.estado_predeterminado.label_tag }}
+                                            {{ form.estado_predeterminado }}
+                                            {% if form.estado_predeterminado.errors %}
+                                                <div class="text-danger small">{{ form.estado_predeterminado.errors }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Sobrescribir -->
+                                        <div class="mb-3 form-check form-switch">
+                                            {{ form.sobrescribir_existentes }}
+                                            <label class="form-check-label" for="{{ form.sobrescribir_existentes.id_for_label }}">
+                                                {{ form.sobrescribir_existentes.label }}
+                                            </label>
+                                            {% if form.sobrescribir_existentes.help_text %}
+                                                <div class="form-text">{{ form.sobrescribir_existentes.help_text }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Configuración de exclusión -->
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Excluir Días</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Fines de semana -->
+                                        <div class="mb-3 form-check form-switch">
+                                            {{ form.excluir_fines_semana }}
+                                            <label class="form-check-label" for="{{ form.excluir_fines_semana.id_for_label }}">
+                                                {{ form.excluir_fines_semana.label }}
+                                            </label>
+                                        </div>
+
+                                        <!-- Días festivos -->
+                                        <div class="mb-3 form-check form-switch">
+                                            {{ form.excluir_festivos }}
+                                            <label class="form-check-label" for="{{ form.excluir_festivos.id_for_label }}">
+                                                {{ form.excluir_festivos.label }}
+                                            </label>
+                                            {% if form.excluir_festivos.help_text %}
+                                                <div class="form-text">{{ form.excluir_festivos.help_text }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Días específicos -->
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.dias_excluir.label }}</label>
+                                            {% if form.dias_excluir.help_text %}
+                                                <div class="form-text mb-2">{{ form.dias_excluir.help_text }}</div>
+                                            {% endif %}
+                                            <div class="border rounded p-3">
+                                                {% for choice in form.dias_excluir %}
+                                                    <div class="form-check">
+                                                        {{ choice.tag }}
+                                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                            {{ choice.choice_label }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Columna central - Lista de empleados -->
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Lista de Empleados</h6>
+                                        <span class="badge bg-primary" id="contadorEmpleados">0 empleados</span>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form.empleados.label_tag }}
+                                        {{ form.empleados }}
+                                        {% if form.empleados.errors %}
+                                            <div class="text-danger small">{{ form.empleados.errors }}</div>
+                                        {% endif %}
+
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i>
+                                                Formato: Un empleado por línea. Máximo 50 empleados.
+                                            </small>
+                                        </div>
+
+                                        <!-- Plantillas rápidas -->
+                                        <div class="mt-3">
+                                            <label class="form-label">Plantillas Rápidas:</label>
+                                            <div class="btn-group w-100">
+                                                <button type="button" class="btn btn-outline-primary btn-sm"
+                                                        onclick="cargarPlantilla('pequena')">
+                                                    <i class="bi bi-people"></i> Pequeña
+                                                </button>
+                                                <button type="button" class="btn btn-outline-success btn-sm"
+                                                        onclick="cargarPlantilla('mediana')">
+                                                    <i class="bi bi-people-fill"></i> Mediana
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning btn-sm"
+                                                        onclick="limpiarLista()">
+                                                    <i class="bi bi-eraser"></i> Limpiar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Columna derecha - Configuración de rango -->
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Configuración del Rango</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Tipo de rango -->
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.tipo_rango.label }}</label>
+                                            <div class="border rounded p-3">
+                                                {% for choice in form.tipo_rango %}
+                                                    <div class="form-check">
+                                                        {{ choice.tag }}
+                                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                            {{ choice.choice_label }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel para rango de fechas -->
+                                        <div id="panelRangoFechas" class="rango-panel">
+                                            <div class="mb-3">
+                                                {{ form.fecha_inicio.label_tag }}
+                                                {{ form.fecha_inicio }}
+                                                {% if form.fecha_inicio.errors %}
+                                                    <div class="text-danger small">{{ form.fecha_inicio.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="mb-3">
+                                                {{ form.fecha_fin.label_tag }}
+                                                {{ form.fecha_fin }}
+                                                {% if form.fecha_fin.errors %}
+                                                    <div class="text-danger small">{{ form.fecha_fin.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel para mes completo -->
+                                        <div id="panelMesCompleto" class="rango-panel" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        {{ form.mes.label_tag }}
+                                                        {{ form.mes }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        {{ form.año.label_tag }}
+                                                        {{ form.año }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div id="infoMes" class="alert alert-light py-2" style="display: none;">
+                                                <small>
+                                                    <i class="bi bi-calendar"></i>
+                                                    <span id="mesInfoText"></span>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen y cálculo -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h6 class="mb-0">Resumen y Cálculo</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center" id="resumenCalculo">
+                                            <div class="col-md-3">
+                                                <h4 id="resumenEmpleados">0</h4>
+                                                <small class="text-muted">Empleados</small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <h4 id="resumenDias">0</h4>
+                                                <small class="text-muted">Días</small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <h4 id="resumenRegistros">0</h4>
+                                                <small class="text-muted">Registros</small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button type="button" id="btnCalcular" class="btn btn-info btn-sm">
+                                                    <i class="bi bi-calculator"></i> Calcular
+                                                </button>
+                                                <button type="button" id="btnVistaPrevia" class="btn btn-primary btn-sm mt-1">
+                                                    <i class="bi bi-eye"></i> Vista Previa
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div id="detallesRango" class="mt-3" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <strong>Rango:</strong>
+                                                    <span id="rangoFechas"></span>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <strong>Primeros días:</strong>
+                                                    <span id="ejemploFechas"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="{% url 'incidencia_list' %}" class="btn btn-secondary">
+                                            <i class="bi bi-arrow-left"></i> Volver al Listado
+                                        </a>
+                                        <a href="{% url 'incidencia_create_masiva' %}" class="btn btn-outline-primary ms-2">
+                                            <i class="bi bi-list-check"></i> Registro por Día
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="bi bi-save"></i> Generar Incidencias
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elementos del DOM
+    const form = document.getElementById('rangoDiasForm');
+    const empleadosTextarea = document.getElementById('{{ form.empleados.id_for_label }}');
+    const tipoRangoRadios = document.querySelectorAll('input[name="tipo_rango"]');
+    const panelRangoFechas = document.getElementById('panelRangoFechas');
+    const panelMesCompleto = document.getElementById('panelMesCompleto');
+    const mesSelect = document.getElementById('{{ form.mes.id_for_label }}');
+    const añoInput = document.getElementById('{{ form.año.id_for_label }}');
+    const infoMes = document.getElementById('infoMes');
+    const mesInfoText = document.getElementById('mesInfoText');
+
+    // Elementos de resumen
+    const contadorEmpleados = document.getElementById('contadorEmpleados');
+    const resumenEmpleados = document.getElementById('resumenEmpleados');
+    const resumenDias = document.getElementById('resumenDias');
+    const resumenRegistros = document.getElementById('resumenRegistros');
+    const detallesRango = document.getElementById('detallesRango');
+    const rangoFechas = document.getElementById('rangoFechas');
+    const ejemploFechas = document.getElementById('ejemploFechas');
+    const btnCalcular = document.getElementById('btnCalcular');
+    const btnVistaPrevia = document.getElementById('btnVistaPrevia');
+
+    // Actualizar contador de empleados
+    function actualizarContadorEmpleados() {
+        const texto = empleadosTextarea.value;
+        const lineas = texto.split('\n').filter(linea => linea.trim());
+        const count = lineas.length;
+
+        contadorEmpleados.textContent = `${count} empleados`;
+        resumenEmpleados.textContent = count;
+        actualizarResumenRegistros();
+    }
+
+    // Cambiar paneles según tipo de rango
+    function actualizarPanelesRango() {
+        const tipoSeleccionado = document.querySelector('input[name="tipo_rango"]:checked').value;
+
+        if (tipoSeleccionado === 'rango_fechas') {
+            panelRangoFechas.style.display = 'block';
+            panelMesCompleto.style.display = 'none';
+        } else if (tipoSeleccionado === 'mes_completo') {
+            panelRangoFechas.style.display = 'none';
+            panelMesCompleto.style.display = 'block';
+            actualizarInfoMes();
+        }
+    }
+
+    // Actualizar información del mes
+    function actualizarInfoMes() {
+        const mes = mesSelect.value;
+        const año = añoInput.value;
+
+        if (mes && año) {
+            fetch(`{% url 'obtener_dias_mes' %}?mes=${mes}&año=${año}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mesInfoText.textContent =
+                        `${data.nombre_mes} ${año} - ${data.total_dias} días`;
+                    infoMes.style.display = 'block';
+                    resumenDias.textContent = data.total_dias;
+                    actualizarResumenRegistros();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        } else {
+            infoMes.style.display = 'none';
+        }
+    }
+
+    // Actualizar resumen de registros
+    function actualizarResumenRegistros() {
+        const empleados = parseInt(resumenEmpleados.textContent) || 0;
+        const dias = parseInt(resumenDias.textContent) || 0;
+        const registros = empleados * dias;
+
+        resumenRegistros.textContent = registros;
+
+        // Cambiar color si hay muchos registros
+        if (registros > 500) {
+            resumenRegistros.className = 'text-danger';
+        } else if (registros > 100) {
+            resumenRegistros.className = 'text-warning';
+        } else {
+            resumenRegistros.className = 'text-dark';
+        }
+    }
+
+    // Calcular rango
+    function calcularRango() {
+        const formData = new FormData(form);
+
+        fetch('{% url "calcular_rango" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resumenDias.textContent = data.total_dias;
+                resumenRegistros.textContent = data.total_registros;
+
+                // Mostrar detalles
+                if (data.primera_fecha && data.ultima_fecha) {
+                    rangoFechas.textContent = `${data.primera_fecha} - ${data.ultima_fecha}`;
+                    ejemploFechas.textContent = data.fechas_ejemplo.join(', ');
+                    detallesRango.style.display = 'block';
+                }
+
+                actualizarResumenRegistros();
+            } else {
+                alert('Error al calcular: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al calcular el rango');
+        });
+    }
+
+    // Event listeners
+    empleadosTextarea.addEventListener('input', actualizarContadorEmpleados);
+
+    tipoRangoRadios.forEach(radio => {
+        radio.addEventListener('change', actualizarPanelesRango);
+    });
+
+    mesSelect.addEventListener('change', actualizarInfoMes);
+    añoInput.addEventListener('change', actualizarInfoMes);
+
+    btnCalcular.addEventListener('click', calcularRango);
+
+    btnVistaPrevia.addEventListener('click', function() {
+        form.action = '{% url "vista_previa_rango" %}';
+        form.submit();
+    });
+
+    // Inicializar
+    actualizarContadorEmpleados();
+    actualizarPanelesRango();
+    actualizarInfoMes();
+});
+
+// Funciones de plantillas
+function cargarPlantilla(tipo) {
+    let contenido = '';
+
+    const plantillas = {
+        pequena: `Juan Pérez
+María García
+Carlos López`,
+        mediana: `Juan Pérez
+María García
+Carlos López
+Ana Martínez
+Pedro Rodríguez
+Laura Hernández
+Miguel Sánchez
+Isabel Díaz`
+    };
+
+    if (plantillas[tipo]) {
+        contenido = plantillas[tipo];
+    }
+
+    document.getElementById('{{ form.empleados.id_for_label }}').value = contenido;
+    document.getElementById('{{ form.empleados.id_for_label }}').dispatchEvent(new Event('input'));
+}
+
+function limpiarLista() {
+    if (confirm('¿Está seguro de limpiar la lista de empleados?')) {
+        document.getElementById('{{ form.empleados.id_for_label }}').value = '';
+        document.getElementById('{{ form.empleados.id_for_label }}').dispatchEvent(new Event('input'));
+    }
+}
+
+// Validación antes de enviar
+document.getElementById('rangoDiasForm').addEventListener('submit', function(e) {
+    const empleados = document.getElementById('{{ form.empleados.id_for_label }}').value;
+    const estado = document.getElementById('{{ form.estado_predeterminado.id_for_label }}').value;
+    const area = document.getElementById('{{ form.area.id_for_label }}').value;
+    const registros = parseInt(document.getElementById('resumenRegistros').textContent) || 0;
+
+    let errores = [];
+
+    if (!empleados.trim()) errores.push('La lista de empleados es obligatoria');
+    if (!estado) errores.push('El estado es obligatorio');
+    if (!area) errores.push('El área es obligatoria');
+    if (registros === 0) errores.push('No hay registros para generar');
+    if (registros > 1000) errores.push('Demasiados registros (máximo 1000)');
+
+    if (errores.length > 0) {
+        e.preventDefault();
+        alert('Errores de validación:\n• ' + errores.join('\n• '));
+        return false;
+    }
+
+    if (!confirm(`¿Está seguro de generar ${registros} registros de incidencias?`)) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+
+<style>
+.rango-panel {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+#resumenCalculo h4 {
+    margin-bottom: 0.5rem;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+    font-weight: bold;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+    font-weight: bold;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %}

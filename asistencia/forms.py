@@ -1,15 +1,12 @@
 # forms.py
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
-
 from django.core.exceptions import ValidationError
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import User
 from .models import ResponsableArea, Area, Incidencia
 from django.contrib.auth.models import User
-from django.utils import timezone
-import datetime
 import re
+import calendar
+import datetime
 
 
 class LDAPAuthenticationForm(AuthenticationForm):
@@ -315,6 +312,10 @@ class AsignacionRapidaForm(forms.Form):
         return username
 
 
+# _____________________________________________________________________________________________________________________
+from django.utils import timezone
+
+
 class IncidenciaForm(forms.ModelForm):
     """Formulario individual para una incidencia"""
 
@@ -547,3 +548,584 @@ class IncidenciaEdicionMasivaForm(forms.Form):
         if not incidencias:
             raise ValidationError("Debe seleccionar al menos una incidencia.")
         return incidencias
+
+
+# ______________________________________________________________________________________________________________________
+from datetime import datetime, date, timedelta
+
+class IncidenciaRangoDiasForm(forms.Form):
+    """Formulario para crear incidencias en un rango de días"""
+
+    # Selección de área
+    area = forms.ModelChoiceField(
+        queryset=Area.objects.all().order_by('nombre'),
+        label="Área",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True
+    )
+
+    # Lista de empleados
+    empleados = forms.CharField(
+        label="Lista de Empleados",
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': '8',
+            'placeholder': 'Ingrese un empleado por línea\nEjemplo:\nJuan Pérez\nMaría García\nCarlos López'
+        }),
+        help_text="Un empleado por línea. Use el formato: Nombre Apellido"
+    )
+
+    # Estado predeterminado
+    estado_predeterminado = forms.ChoiceField(
+        choices=[('', '-- Seleccionar Estado --')] + list(Incidencia.CHOICES.items()),
+        label="Estado de Asistencia",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True
+    )
+
+    # Tipo de rango
+    TIPO_RANGO = [
+        ('rango_fechas', 'Rango de Fechas Específico'),
+        ('mes_completo', 'Mes Completo'),
+        ('rango_personalizado', 'Rango Personalizado'),
+    ]
+
+    tipo_rango = forms.ChoiceField(
+        choices=TIPO_RANGO,
+        initial='rango_fechas',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Tipo de Rango"
+    )
+
+    # Para rango de fechas específico
+    fecha_inicio = forms.DateField(
+        label="Fecha Inicio",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        required=False
+    )
+
+    fecha_fin = forms.DateField(
+        label="Fecha Fin",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        required=False
+    )
+
+    # Para mes completo
+    mes = forms.ChoiceField(
+        choices=[],
+        label="Mes",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False
+    )
+
+    año = forms.IntegerField(
+        label="Año",
+        initial=datetime.now().year,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '2020',
+            'max': '2030'
+        }),
+        required=False
+    )
+
+    # Días de la semana a excluir
+    DIAS_SEMANA = [
+        (0, 'Lunes'),
+        (1, 'Martes'),
+        (2, 'Miércoles'),
+        (3, 'Jueves'),
+        (4, 'Viernes'),
+        (5, 'Sábado'),
+        (6, 'Domingo'),
+    ]
+
+    excluir_fines_semana = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Excluir fines de semana",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+    dias_excluir = forms.MultipleChoiceField(
+        choices=DIAS_SEMANA,
+        required=False,
+        label="Días específicos a excluir",
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        help_text="Seleccione los días que NO desea incluir"
+    )
+
+    # Días festivos
+    excluir_festivos = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Excluir días festivos",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        help_text="Excluir días marcados como festivos en el sistema"
+    )
+
+    # Configuración avanzada
+    sobrescribir_existentes = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Sobrescribir incidencias existentes",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        help_text="Si está marcado, se actualizarán las incidencias existentes"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Llenar choices de meses
+        meses = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        self.fields['mes'].choices = [('', '-- Seleccionar Mes --')] + meses
+        self.fields['mes'].initial = datetime.now().month
+
+        # Establecer fechas por defecto
+        hoy = date.today()
+        inicio_mes = hoy.replace(day=1)
+        self.fields['fecha_inicio'].initial = inicio_mes
+        self.fields['fecha_fin'].initial = hoy
+
+    def clean_empleados(self):
+        empleados = self.cleaned_data.get('empleados', '')
+        if empleados:
+            lista_empleados = [emp.strip() for emp in empleados.split('\n') if emp.strip()]
+            lista_empleados = [emp for emp in lista_empleados if emp]
+
+            if not lista_empleados:
+                raise ValidationError("Debe ingresar al menos un empleado.")
+
+            if len(lista_empleados) > 50:
+                raise ValidationError("No puede ingresar más de 50 empleados a la vez.")
+
+            return lista_empleados
+        return []
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo_rango = cleaned_data.get('tipo_rango')
+        fecha_inicio = cleaned_data.get('fecha_inicio')
+        fecha_fin = cleaned_data.get('fecha_fin')
+        mes = cleaned_data.get('mes')
+        año = cleaned_data.get('año')
+
+        # Validaciones según el tipo de rango
+        if tipo_rango == 'rango_fechas':
+            if not fecha_inicio or not fecha_fin:
+                raise ValidationError("Para rango de fechas, debe especificar fecha inicio y fin.")
+
+            if fecha_inicio > fecha_fin:
+                raise ValidationError("La fecha inicio no puede ser mayor que la fecha fin.")
+
+            if (fecha_fin - fecha_inicio).days > 365:
+                raise ValidationError("El rango no puede ser mayor a 365 días.")
+
+        elif tipo_rango == 'mes_completo':
+            if not mes or not año:
+                raise ValidationError("Para mes completo, debe especificar mes y año.")
+
+        # Validar que no se generen demasiados registros
+        empleados = cleaned_data.get('empleados', [])
+        total_dias = self._calcular_total_dias(cleaned_data)
+        total_registros = len(empleados) * total_dias
+
+        if total_registros > 1000:
+            raise ValidationError(
+                f"La operación generaría {total_registros} registros. "
+                f"El máximo permitido es 1000. Reduzca la cantidad de empleados o días."
+            )
+
+        return cleaned_data
+
+    def _calcular_total_dias(self, cleaned_data):
+        """Calcula el total de días en el rango seleccionado"""
+        tipo_rango = cleaned_data.get('tipo_rango')
+
+        if tipo_rango == 'rango_fechas':
+            fecha_inicio = cleaned_data.get('fecha_inicio')
+            fecha_fin = cleaned_data.get('fecha_fin')
+            if fecha_inicio and fecha_fin:
+                return (fecha_fin - fecha_inicio).days + 1
+
+        elif tipo_rango == 'mes_completo':
+            mes = int(cleaned_data.get('mes', 1))
+            año = cleaned_data.get('año', datetime.now().year)
+            return calendar.monthrange(año, mes)[1]
+
+        return 0
+
+    def obtener_rango_fechas(self):
+        """Retorna la lista de fechas en el rango seleccionado"""
+        tipo_rango = self.cleaned_data.get('tipo_rango')
+        excluir_fines_semana = self.cleaned_data.get('excluir_fines_semana')
+        dias_excluir = [int(dia) for dia in self.cleaned_data.get('dias_excluir', [])]
+
+        fechas = []
+
+        if tipo_rango == 'rango_fechas':
+            fecha_inicio = self.cleaned_data.get('fecha_inicio')
+            fecha_fin = self.cleaned_data.get('fecha_fin')
+
+            if fecha_inicio and fecha_fin:
+                current_date = fecha_inicio
+                while current_date <= fecha_fin:
+                    fechas.append(current_date)
+                    current_date += timedelta(days=1)
+
+        elif tipo_rango == 'mes_completo':
+            mes = int(self.cleaned_data.get('mes', 1))
+            año = self.cleaned_data.get('año', datetime.now().year)
+
+            # Obtener primer y último día del mes
+            _, ultimo_dia = calendar.monthrange(año, mes)
+
+            for dia in range(1, ultimo_dia + 1):
+                fecha = date(año, mes, dia)
+                fechas.append(fecha)
+
+        # Filtrar fechas según exclusiones
+        if excluir_fines_semana or dias_excluir:
+            fechas_filtradas = []
+            for fecha in fechas:
+                dia_semana = fecha.weekday()
+
+                # Excluir fines de semana (sábado=5, domingo=6)
+                if excluir_fines_semana and dia_semana >= 5:
+                    continue
+
+                # Excluir días específicos
+                if dia_semana in dias_excluir:
+                    continue
+
+                fechas_filtradas.append(fecha)
+
+            fechas = fechas_filtradas
+
+        # Aquí podrías agregar lógica para excluir días festivos
+        if self.cleaned_data.get('excluir_festivos'):
+            # Implementar lógica de días festivos si es necesario
+            pass
+
+        return fechas
+
+
+# ______________________________________________________________________________________________________________________
+class IncidenciaTrabajadoresExistentesForm(forms.Form):
+    """Formulario para crear incidencias desde trabajadores existentes"""
+
+    # Selección de área
+    area = forms.ModelChoiceField(
+        queryset=Area.objects.all().order_by('nombre'),
+        label="Área",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_area_trabajadores'
+        }),
+        required=True,
+        help_text="Seleccione el área para filtrar trabajadores"
+    )
+
+    # Selección de trabajadores (se llena dinámicamente)
+    trabajadores = forms.ModelMultipleChoiceField(
+        queryset=ResponsableArea.objects.none(),
+        label="Trabajadores",
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select',
+            'size': '10',
+            'id': 'id_trabajadores'
+        }),
+        required=True,
+        help_text="Seleccione los trabajadores. Use Ctrl+Click para selección múltiple"
+    )
+
+    # Estado predeterminado
+    estado_predeterminado = forms.ChoiceField(
+        choices=[('', '-- Seleccionar Estado --')] + list(Incidencia.CHOICES.items()),
+        label="Estado de Asistencia",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True
+    )
+
+    # Tipo de rango
+    TIPO_RANGO = [
+        ('rango_fechas', 'Rango de Fechas Específico'),
+        ('mes_completo', 'Mes Completo'),
+        ('semana_actual', 'Semana Actual'),
+        ('semana_siguiente', 'Semana Siguiente'),
+    ]
+
+    tipo_rango = forms.ChoiceField(
+        choices=TIPO_RANGO,
+        initial='rango_fechas',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Tipo de Rango"
+    )
+
+    # Para rango de fechas específico
+    fecha_inicio = forms.DateField(
+        label="Fecha Inicio",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        required=False
+    )
+
+    fecha_fin = forms.DateField(
+        label="Fecha Fin",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        required=False
+    )
+
+    # Para mes completo
+    mes = forms.ChoiceField(
+        choices=[],
+        label="Mes",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False
+    )
+
+    año = forms.IntegerField(
+        label="Año",
+        initial=datetime.now().year,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '2020',
+            'max': '2030'
+        }),
+        required=False
+    )
+
+    # Configuración de días
+    DIAS_SEMANA = [
+        (0, 'Lunes'),
+        (1, 'Martes'),
+        (2, 'Miércoles'),
+        (3, 'Jueves'),
+        (4, 'Viernes'),
+        (5, 'Sábado'),
+        (6, 'Domingo'),
+    ]
+
+    excluir_fines_semana = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Excluir fines de semana",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+    dias_excluir = forms.MultipleChoiceField(
+        choices=DIAS_SEMANA,
+        required=False,
+        label="Días específicos a excluir",
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        help_text="Seleccione los días que NO desea incluir"
+    )
+
+    # Comportamiento con incidencias existentes
+    COMPORTAMIENTO_EXISTENTES = [
+        ('sobrescribir', 'Sobrescribir incidencias existentes'),
+        ('omitir', 'Omitir fechas con incidencias existentes'),
+        ('preguntar', 'Preguntar por cada conflicto'),
+    ]
+
+    comportamiento_existentes = forms.ChoiceField(
+        choices=COMPORTAMIENTO_EXISTENTES,
+        initial='sobrescribir',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Comportamiento con incidencias existentes"
+    )
+
+    # Opción para incluir todos los trabajadores del área
+    incluir_todos = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Incluir todos los trabajadores del área",
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+            'id': 'id_incluir_todos'
+        }),
+        help_text="Si está marcado, se seleccionarán automáticamente todos los trabajadores del área"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Llenar choices de meses
+        meses = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        self.fields['mes'].choices = [('', '-- Seleccionar Mes --')] + meses
+        self.fields['mes'].initial = datetime.now().month
+
+        # Establecer fechas por defecto
+        hoy = date.today()
+        inicio_mes = hoy.replace(day=1)
+        self.fields['fecha_inicio'].initial = inicio_mes
+        self.fields['fecha_fin'].initial = hoy
+
+        # Si hay un área seleccionada en los datos, actualizar el queryset de trabajadores
+        if 'area' in self.data:
+            try:
+                area_id = int(self.data.get('area'))
+                self.fields['trabajadores'].queryset = self._get_trabajadores_queryset(area_id)
+            except (ValueError, TypeError):
+                pass
+
+    def _get_trabajadores_queryset(self, area_id):
+        """Obtiene el queryset de trabajadores para un área específica"""
+        return ResponsableArea.objects.filter(
+            area_id=area_id,
+            activo=True
+        ).select_related('usuario').order_by('usuario__first_name', 'usuario__last_name')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo_rango = cleaned_data.get('tipo_rango')
+        fecha_inicio = cleaned_data.get('fecha_inicio')
+        fecha_fin = cleaned_data.get('fecha_fin')
+        mes = cleaned_data.get('mes')
+        año = cleaned_data.get('año')
+        area = cleaned_data.get('area')
+        trabajadores = cleaned_data.get('trabajadores')
+        incluir_todos = cleaned_data.get('incluir_todos')
+
+        # Validar área
+        if not area:
+            raise ValidationError("Debe seleccionar un área.")
+
+        # Actualizar queryset de trabajadores basado en el área
+        if area:
+            self.fields['trabajadores'].queryset = self._get_trabajadores_queryset(area.id)
+
+        # Si "incluir todos" está marcado, seleccionar todos los trabajadores del área
+        if incluir_todos and area:
+            todos_trabajadores = self._get_trabajadores_queryset(area.id)
+            cleaned_data['trabajadores'] = list(todos_trabajadores)
+
+        # Validar que se hayan seleccionado trabajadores
+        if not cleaned_data.get('trabajadores'):
+            raise ValidationError("Debe seleccionar al menos un trabajador.")
+
+        # Validaciones según el tipo de rango
+        if tipo_rango == 'rango_fechas':
+            if not fecha_inicio or not fecha_fin:
+                raise ValidationError("Para rango de fechas, debe especificar fecha inicio y fin.")
+
+            if fecha_inicio > fecha_fin:
+                raise ValidationError("La fecha inicio no puede ser mayor que la fecha fin.")
+
+            if (fecha_fin - fecha_inicio).days > 365:
+                raise ValidationError("El rango no puede ser mayor a 365 días.")
+
+        elif tipo_rango == 'mes_completo':
+            if not mes or not año:
+                raise ValidationError("Para mes completo, debe especificar mes y año.")
+
+        # Validar que no se generen demasiados registros
+        total_trabajadores = len(cleaned_data.get('trabajadores', []))
+        total_dias = self._calcular_total_dias(cleaned_data)
+        total_registros = total_trabajadores * total_dias
+
+        if total_registros > 2000:
+            raise ValidationError(
+                f"La operación generaría {total_registros} registros. "
+                f"El máximo permitido es 2000. Reduzca la cantidad de trabajadores o días."
+            )
+
+        return cleaned_data
+
+    def _calcular_total_dias(self, cleaned_data):
+        """Calcula el total de días en el rango seleccionado"""
+        tipo_rango = cleaned_data.get('tipo_rango')
+        excluir_fines_semana = cleaned_data.get('excluir_fines_semana')
+        dias_excluir = [int(dia) for dia in cleaned_data.get('dias_excluir', [])]
+
+        fechas = self.obtener_rango_fechas()
+
+        # Filtrar fechas según exclusiones
+        if excluir_fines_semana or dias_excluir:
+            fechas_filtradas = []
+            for fecha in fechas:
+                dia_semana = fecha.weekday()
+
+                # Excluir fines de semana (sábado=5, domingo=6)
+                if excluir_fines_semana and dia_semana >= 5:
+                    continue
+
+                # Excluir días específicos
+                if dia_semana in dias_excluir:
+                    continue
+
+                fechas_filtradas.append(fecha)
+
+            fechas = fechas_filtradas
+
+        return len(fechas)
+
+    def obtener_rango_fechas(self):
+        """Retorna la lista de fechas en el rango seleccionado"""
+        tipo_rango = self.cleaned_data.get('tipo_rango')
+        fecha_inicio = self.cleaned_data.get('fecha_inicio')
+        fecha_fin = self.cleaned_data.get('fecha_fin')
+        mes = self.cleaned_data.get('mes')
+        año = self.cleaned_data.get('año')
+
+        fechas = []
+
+        if tipo_rango == 'rango_fechas' and fecha_inicio and fecha_fin:
+            current_date = fecha_inicio
+            while current_date <= fecha_fin:
+                fechas.append(current_date)
+                current_date += timedelta(days=1)
+
+        elif tipo_rango == 'mes_completo' and mes and año:
+            mes = int(mes)
+            _, ultimo_dia = calendar.monthrange(año, mes)
+            for dia in range(1, ultimo_dia + 1):
+                fecha = date(año, mes, dia)
+                fechas.append(fecha)
+
+        elif tipo_rango == 'semana_actual':
+            hoy = date.today()
+            inicio_semana = hoy - timedelta(days=hoy.weekday())
+            fin_semana = inicio_semana + timedelta(days=6)
+            current_date = inicio_semana
+            while current_date <= fin_semana:
+                fechas.append(current_date)
+                current_date += timedelta(days=1)
+
+        elif tipo_rango == 'semana_siguiente':
+            hoy = date.today()
+            inicio_semana_siguiente = hoy + timedelta(days=(7 - hoy.weekday()))
+            fin_semana_siguiente = inicio_semana_siguiente + timedelta(days=6)
+            current_date = inicio_semana_siguiente
+            while current_date <= fin_semana_siguiente:
+                fechas.append(current_date)
+                current_date += timedelta(days=1)
+
+        return fechas
+
+    def obtener_trabajadores_seleccionados(self):
+        """Retorna la lista de trabajadores seleccionados con información completa"""
+        trabajadores = self.cleaned_data.get('trabajadores', [])
+        resultado = []
+
+        for responsable in trabajadores:
+            resultado.append({
+                'id': responsable.id,
+                'usuario_id': responsable.usuario.id,
+                'username': responsable.usuario.username,
+                'nombre_completo': f"{responsable.usuario.first_name} {responsable.usuario.last_name}".strip(),
+                'email': responsable.usuario.email,
+                'area_nombre': responsable.area.nombre,
+                'area_codigo': responsable.area.cod_area
+            })
+
+        return resultado

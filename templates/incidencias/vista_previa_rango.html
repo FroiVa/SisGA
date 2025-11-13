@@ -1,0 +1,170 @@
+<!-- templates/incidencias/vista_previa_rango.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-eye"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Resumen general -->
+                    <div class="alert alert-info">
+                        <h5>Resumen de la Operación</h5>
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <h3>{{ total_empleados }}</h3>
+                                <small>Empleados</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h3>{{ total_dias }}</h3>
+                                <small>Días</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h3>{{ total_registros }}</h3>
+                                <small>Registros a generar</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h3>{{ area.nombre }}</h3>
+                                <small>Área</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Vista previa de empleados -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Empleados ({{ total_empleados }})</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        <div class="list-group">
+                                            {% for empleado in empleados_preview %}
+                                            <div class="list-group-item">
+                                                <i class="bi bi-person"></i> {{ empleado }}
+                                            </div>
+                                            {% endfor %}
+                                            {% if total_empleados > 5 %}
+                                            <div class="list-group-item text-center text-muted">
+                                                ... y {{ total_empleados|add:"-5" }} empleados más
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vista previa de fechas -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Fechas ({{ total_dias }} días)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        <div class="list-group">
+                                            {% for fecha in fechas_preview %}
+                                            <div class="list-group-item">
+                                                <i class="bi bi-calendar"></i>
+                                                {{ fecha|date:"d/m/Y" }}
+                                                <small class="text-muted">({{ fecha|date:"l" }})</small>
+                                            </div>
+                                            {% endfor %}
+                                            {% if total_dias > 7 %}
+                                            <div class="list-group-item text-center text-muted">
+                                                ... y {{ total_dias|add:"-7" }} días más
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ejemplo de registros -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Ejemplo de Registros a Generar</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Empleado</th>
+                                                    {% for fecha in fechas_preview %}
+                                                    <th class="text-center">{{ fecha|date:"d/m" }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for empleado in empleados_preview %}
+                                                <tr>
+                                                    <td><small>{{ empleado }}</small></td>
+                                                    {% for fecha in fechas_preview %}
+                                                    <td class="text-center">
+                                                        <span class="badge bg-success">{{ estado_predeterminado }}</span>
+                                                    </td>
+                                                    {% endfor %}
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <small class="text-muted">
+                                        Se generarán registros similares para todos los empleados y días del rango.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <a href="{% url 'incidencia_rango_dias' %}" class="btn btn-secondary">
+                                        <i class="bi bi-arrow-left"></i> Volver y Modificar
+                                    </a>
+                                </div>
+                                <div>
+                                    <form method="post" action="{% url 'incidencia_rango_dias' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        {% for field in form %}
+                                            {% if field.value %}
+                                                {% if field.field.widget.input_type == 'checkbox' %}
+                                                    <input type="hidden" name="{{ field.name }}" value="{{ field.value|yesno:'on,off' }}">
+                                                {% else %}
+                                                    <input type="hidden" name="{{ field.name }}" value="{{ field.value }}">
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="bi bi-check-circle"></i> Confirmar y Generar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

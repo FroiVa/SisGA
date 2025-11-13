@@ -1,34 +1,24 @@
 # views.py
+from django.db.models import Q, Count
+from django.core.paginator import Paginator
 from django.contrib.auth import login, logout, authenticate
-from .forms import LDAPAuthenticationForm
-import asistencia.trabajadores
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
-from django.core.paginator import Paginator
-
 from django.db import transaction
-
-from django.db.models import Q, Count
-from datetime import datetime, date
-
+from datetime import datetime, date, timedelta
+from .models import ResponsableArea, Area, Incidencia
+from .forms import (LDAPAuthenticationForm, ResponsableAreaForm, BuscarCrearUsuarioForm,
+                    AsignacionRapidaForm, UserCreationFlexibleForm, IncidenciaTrabajadoresExistentesForm,
+                    IncidenciaRangoDiasForm, IncidenciaForm, IncidenciaMasivaForm, IncidenciaImportarForm,
+                    FiltroIncidenciasForm, IncidenciaEdicionMasivaForm
+                    )
+import calendar
 import json
 import csv
 import io
-from .models import ResponsableArea, Area, Incidencia, User
-from .forms import (
-    ResponsableAreaForm,
-    BuscarCrearUsuarioForm,
-    AsignacionRapidaForm,
-    UserCreationFlexibleForm,
-    IncidenciaForm,
-    IncidenciaMasivaForm,
-    IncidenciaImportarForm,
-    FiltroIncidenciasForm,
-    IncidenciaEdicionMasivaForm
-)
 from .trabajadores import obtener_usuarios_ldap3
 
 
@@ -85,7 +75,7 @@ def dashboard_view(request):
     trabajadores_list = []
     for area in areas:
         trabajadores = obtener_usuarios_ldap3(area.area.cod_area)
-    trabajadores_list.extend(trabajadores)
+        trabajadores_list.extend(trabajadores)
     return render(request, 'dashboard.html', {
         'user': request.user,
         'areas': areas,
@@ -368,7 +358,524 @@ def gestion_usuario_completa(request, usuario_id=None):
     }
     return render(request, 'responsable_area/gestion_usuario_completa.html', context)
 
+# _____________________________________________________________________________________________________________________
 
+
+
+@login_required
+def incidencia_trabajadores_existentes(request):
+    """Crea incidencias para trabajadores existentes en un rango de días"""
+    if request.method == 'POST':
+        form = IncidenciaTrabajadoresExistentesForm(request.POST)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    area = form.cleaned_data['area']
+                    trabajadores_responsables = form.cleaned_data['trabajadores']
+                    estado_predeterminado = form.cleaned_data['estado_predeterminado']
+                    comportamiento = form.cleaned_data['comportamiento_existentes']
+
+                    # Obtener rango de fechas
+                    fechas = form.obtener_rango_fechas()
+
+                    if not fechas:
+                        messages.error(request, "No hay fechas válidas en el rango seleccionado.")
+                        return redirect('incidencia_trabajadores_existentes')
+
+                    # Aplicar filtros de exclusión
+                    fechas = aplicar_filtros_fechas(fechas, form.cleaned_data)
+
+                    incidencias_creadas = 0
+                    incidencias_actualizadas = 0
+                    incidencias_omitidas = 0
+                    errores = []
+
+                    # Procesar cada trabajador y cada fecha
+                    for responsable in trabajadores_responsables:
+                        empleado_nombre = f"{responsable.usuario.first_name} {responsable.usuario.last_name}".strip()
+                        if not empleado_nombre:
+                            empleado_nombre = responsable.usuario.username
+
+                        for fecha in fechas:
+                            try:
+                                # Buscar incidencia existente
+                                incidencia_existente = Incidencia.objects.filter(
+                                    empleado=empleado_nombre,
+                                    fecha_asistencia=fecha,
+                                    area=area.cod_area
+                                ).first()
+
+                                if incidencia_existente:
+                                    if comportamiento == 'sobrescribir':
+                                        # Sobrescribir incidencia existente
+                                        incidencia_existente.estado = estado_predeterminado
+                                        incidencia_existente.save()
+                                        incidencias_actualizadas += 1
+                                    elif comportamiento == 'omitir':
+                                        # Omitir esta fecha
+                                        incidencias_omitidas += 1
+                                        continue
+                                    elif comportamiento == 'preguntar':
+                                        # En una implementación real, aquí manejarías la interacción del usuario
+                                        # Por ahora, omitimos por simplicidad
+                                        incidencias_omitidas += 1
+                                        continue
+                                else:
+                                    # Crear nueva incidencia
+                                    Incidencia.objects.create(
+                                        area=area.cod_area,
+                                        empleado=empleado_nombre,
+                                        estado=estado_predeterminado,
+                                        fecha_asistencia=fecha
+                                    )
+                                    incidencias_creadas += 1
+
+                            except Exception as e:
+                                errores.append(f"{empleado_nombre} - {fecha}: {str(e)}")
+
+                    # Mostrar resultados
+                    mensaje = f"Procesamiento completado: "
+                    if incidencias_creadas > 0:
+                        mensaje += f"{incidencias_creadas} creadas, "
+                    if incidencias_actualizadas > 0:
+                        mensaje += f"{incidencias_actualizadas} actualizadas, "
+                    if incidencias_omitidas > 0:
+                        mensaje += f"{incidencias_omitidas} omitidas, "
+                    if errores:
+                        mensaje += f"{len(errores)} errores"
+
+                    messages.success(request, mensaje.rstrip(', '))
+
+                    # Mostrar detalles si hay errores
+                    if errores and len(errores) <= 5:
+                        for error in errores:
+                            messages.warning(request, f"Error: {error}")
+                    elif errores:
+                        messages.warning(request, f"Se produjeron {len(errores)} errores.")
+
+                    return redirect('incidencia_list')
+
+            except Exception as e:
+                messages.error(request, f"Error al procesar el rango de días: {str(e)}")
+    else:
+        form = IncidenciaTrabajadoresExistentesForm()
+
+    context = {
+        'form': form,
+        'title': 'Incidencias para Trabajadores Existentes'
+    }
+    return render(request, 'incidencias/trabajadores_existentes.html', context)
+
+
+def aplicar_filtros_fechas(fechas, cleaned_data):
+    """Aplica filtros de exclusión a la lista de fechas"""
+    excluir_fines_semana = cleaned_data.get('excluir_fines_semana')
+    dias_excluir = [int(dia) for dia in cleaned_data.get('dias_excluir', [])]
+
+    if not excluir_fines_semana and not dias_excluir:
+        return fechas
+
+    fechas_filtradas = []
+    for fecha in fechas:
+        dia_semana = fecha.weekday()
+
+        # Excluir fines de semana
+        if excluir_fines_semana and dia_semana >= 5:
+            continue
+
+        # Excluir días específicos
+        if dia_semana in dias_excluir:
+            continue
+
+        fechas_filtradas.append(fecha)
+
+    return fechas_filtradas
+
+
+@login_required
+def obtener_trabajadores_area(request):
+    """Obtiene los trabajadores de un área específica (AJAX)"""
+    if request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            area_id = request.GET.get('area_id')
+
+            if not area_id:
+                return JsonResponse({'success': False, 'error': 'ID de área no proporcionado'})
+
+            trabajadores = ResponsableArea.objects.filter(
+                area_id=area_id,
+                activo=True
+            ).select_related('usuario', 'area').order_by('usuario__first_name', 'usuario__last_name')
+
+            trabajadores_data = []
+            for responsable in trabajadores:
+                nombre_completo = f"{responsable.usuario.first_name} {responsable.usuario.last_name}".strip()
+                if not nombre_completo:
+                    nombre_completo = responsable.usuario.username
+
+                trabajadores_data.append({
+                    'id': responsable.id,
+                    'usuario_id': responsable.usuario.id,
+                    'username': responsable.usuario.username,
+                    'nombre_completo': nombre_completo,
+                    'email': responsable.usuario.email,
+                    'area_nombre': responsable.area.nombre,
+                    'fecha_asignacion': responsable.fecha_asignacion.strftime('%d/%m/%Y')
+                })
+
+            data = {
+                'success': True,
+                'trabajadores': trabajadores_data,
+                'total': len(trabajadores_data)
+            }
+
+            return JsonResponse(data)
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def calcular_rango_trabajadores(request):
+    """Calcula información del rango para trabajadores existentes (AJAX)"""
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        form = IncidenciaTrabajadoresExistentesForm(request.POST)
+        if form.is_valid():
+            try:
+                trabajadores = form.cleaned_data.get('trabajadores', [])
+                fechas = form.obtener_rango_fechas()
+                fechas = aplicar_filtros_fechas(fechas, form.cleaned_data)
+
+                total_trabajadores = len(trabajadores)
+                total_dias = len(fechas)
+                total_registros = total_trabajadores * total_dias
+
+                # Información de las fechas
+                primera_fecha = min(fechas) if fechas else None
+                ultima_fecha = max(fechas) if fechas else None
+
+                # Información de trabajadores (solo primeros 5 para preview)
+                trabajadores_preview = []
+                for responsable in trabajadores[:5]:
+                    nombre_completo = f"{responsable.usuario.first_name} {responsable.usuario.last_name}".strip()
+                    if not nombre_completo:
+                        nombre_completo = responsable.usuario.username
+                    trabajadores_preview.append(nombre_completo)
+
+                data = {
+                    'success': True,
+                    'total_trabajadores': total_trabajadores,
+                    'total_dias': total_dias,
+                    'total_registros': total_registros,
+                    'primera_fecha': primera_fecha.strftime('%d/%m/%Y') if primera_fecha else None,
+                    'ultima_fecha': ultima_fecha.strftime('%d/%m/%Y') if ultima_fecha else None,
+                    'fechas_ejemplo': [fecha.strftime('%d/%m/%Y') for fecha in fechas[:5]] if fechas else [],
+                    'trabajadores_ejemplo': trabajadores_preview
+                }
+
+                return JsonResponse(data)
+
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                })
+
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Formulario inválido',
+                'errores': form.errors.get_json_data()
+            })
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def verificar_incidencias_existentes(request):
+    """Verifica incidencias existentes para el rango seleccionado (AJAX)"""
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            data = json.loads(request.body)
+            area_id = data.get('area_id')
+            trabajadores_ids = data.get('trabajadores_ids', [])
+            fecha_inicio = data.get('fecha_inicio')
+            fecha_fin = data.get('fecha_fin')
+
+            if not all([area_id, trabajadores_ids, fecha_inicio, fecha_fin]):
+                return JsonResponse({'success': False, 'error': 'Datos incompletos'})
+
+            # Obtener área
+            area = Area.objects.get(id=area_id)
+
+            # Obtener trabajadores
+            trabajadores = ResponsableArea.objects.filter(
+                id__in=trabajadores_ids,
+                activo=True
+            ).select_related('usuario')
+
+            # Convertir fechas
+            fecha_inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fecha_fin = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+
+            # Contar incidencias existentes
+            total_existentes = 0
+            detalle_existentes = []
+
+            for responsable in trabajadores:
+                empleado_nombre = f"{responsable.usuario.first_name} {responsable.usuario.last_name}".strip()
+                if not empleado_nombre:
+                    empleado_nombre = responsable.usuario.username
+
+                existentes = Incidencia.objects.filter(
+                    empleado=empleado_nombre,
+                    area=area.cod_area,
+                    fecha_asistencia__range=[fecha_inicio, fecha_fin]
+                ).count()
+
+                if existentes > 0:
+                    total_existentes += existentes
+                    detalle_existentes.append({
+                        'empleado': empleado_nombre,
+                        'existentes': existentes
+                    })
+
+            data = {
+                'success': True,
+                'total_existentes': total_existentes,
+                'detalle_existentes': detalle_existentes[:10]  # Limitar a 10 para preview
+            }
+
+            return JsonResponse(data)
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+# __________________________________________________________________________________________________________________
+
+@login_required
+def incidencia_rango_dias(request):
+    """Crea incidencias para un listado de trabajadores en un rango de días"""
+    if request.method == 'POST':
+        form = IncidenciaRangoDiasForm(request.POST)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    area = form.cleaned_data['area']
+                    empleados = form.cleaned_data['empleados']
+                    estado_predeterminado = form.cleaned_data['estado_predeterminado']
+                    sobrescribir = form.cleaned_data['sobrescribir_existentes']
+
+                    # Obtener rango de fechas
+                    fechas = form.obtener_rango_fechas()
+
+                    if not fechas:
+                        messages.error(request, "No hay fechas válidas en el rango seleccionado.")
+                        return redirect('incidencia_rango_dias')
+
+                    incidencias_creadas = 0
+                    incidencias_actualizadas = 0
+                    errores = []
+
+                    # Procesar cada empleado y cada fecha
+                    for i, empleado in enumerate(empleados, 1):
+                        for fecha in fechas:
+                            try:
+                                # Buscar incidencia existente
+                                incidencia_existente = Incidencia.objects.filter(
+                                    empleado=empleado,
+                                    fecha_asistencia=fecha,
+                                    area=area.cod_area
+                                ).first()
+
+                                if incidencia_existente:
+                                    if sobrescribir:
+                                        incidencia_existente.estado = estado_predeterminado
+                                        incidencia_existente.save()
+                                        incidencias_actualizadas += 1
+                                else:
+                                    # Crear nueva incidencia
+                                    Incidencia.objects.create(
+                                        area=area.cod_area,
+                                        empleado=empleado,
+                                        estado=estado_predeterminado,
+                                        fecha_asistencia=fecha
+                                    )
+                                    incidencias_creadas += 1
+
+                            except Exception as e:
+                                errores.append(f"{empleado} - {fecha}: {str(e)}")
+
+                    # Mostrar resultados
+                    mensaje = f"Procesamiento completado: "
+                    if incidencias_creadas > 0:
+                        mensaje += f"{incidencias_creadas} creadas, "
+                    if incidencias_actualizadas > 0:
+                        mensaje += f"{incidencias_actualizadas} actualizadas, "
+                    if errores:
+                        mensaje += f"{len(errores)} errores"
+
+                    messages.success(request, mensaje.rstrip(', '))
+
+                    # Mostrar detalles si hay errores
+                    if errores and len(errores) <= 10:
+                        for error in errores:
+                            messages.warning(request, f"Error: {error}")
+                    elif errores:
+                        messages.warning(request, f"Se produjeron {len(errores)} errores. Los primeros 5:")
+                        for error in errores[:5]:
+                            messages.warning(request, f"Error: {error}")
+
+                    return redirect('incidencia_list')
+
+            except Exception as e:
+                messages.error(request, f"Error al procesar el rango de días: {str(e)}")
+    else:
+        form = IncidenciaRangoDiasForm()
+
+    context = {
+        'form': form,
+        'title': 'Incidencias por Rango de Días'
+    }
+    return render(request, 'incidencias/rango_dias.html', context)
+
+
+@login_required
+def calcular_rango_dias(request):
+    """Calcula y retorna información sobre el rango de días seleccionado (AJAX)"""
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        form = IncidenciaRangoDiasForm(request.POST)
+        if form.is_valid():
+            try:
+                fechas = form.obtener_rango_fechas()
+                empleados = form.cleaned_data.get('empleados', [])
+
+                total_dias = len(fechas)
+                total_empleados = len(empleados)
+                total_registros = total_dias * total_empleados
+
+                # Información de las fechas
+                primera_fecha = min(fechas) if fechas else None
+                ultima_fecha = max(fechas) if fechas else None
+
+                data = {
+                    'success': True,
+                    'total_dias': total_dias,
+                    'total_empleados': total_empleados,
+                    'total_registros': total_registros,
+                    'primera_fecha': primera_fecha.strftime('%d/%m/%Y') if primera_fecha else None,
+                    'ultima_fecha': ultima_fecha.strftime('%d/%m/%Y') if ultima_fecha else None,
+                    'fechas_ejemplo': [fecha.strftime('%d/%m/%Y') for fecha in fechas[:5]] if fechas else []
+                }
+
+                return JsonResponse(data)
+
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                })
+
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Formulario inválido',
+                'errores': form.errors.get_json_data()
+            })
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def obtener_dias_mes(request):
+    """Obtiene los días de un mes específico (AJAX)"""
+    if request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            año = int(request.GET.get('año', datetime.now().year))
+            mes = int(request.GET.get('mes', datetime.now().month))
+
+            # Calcular días del mes
+            _, dias_mes = calendar.monthrange(año, mes)
+
+            # Generar lista de fechas
+            fechas = []
+            for dia in range(1, dias_mes + 1):
+                fecha = date(año, mes, dia)
+                fechas.append({
+                    'dia': dia,
+                    'fecha': fecha.strftime('%Y-%m-%d'),
+                    'dia_semana': fecha.strftime('%A'),
+                    'es_fin_semana': fecha.weekday() >= 5
+                })
+
+            data = {
+                'success': True,
+                'año': año,
+                'mes': mes,
+                'nombre_mes': calendar.month_name[mes],
+                'total_dias': dias_mes,
+                'fechas': fechas
+            }
+
+            return JsonResponse(data)
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def vista_previa_rango(request):
+    """Genera una vista previa del rango seleccionado"""
+    if request.method == 'POST':
+        form = IncidenciaRangoDiasForm(request.POST)
+        if form.is_valid():
+            area = form.cleaned_data['area']
+            empleados = form.cleaned_data['empleados']
+            estado_predeterminado = form.cleaned_data['estado_predeterminado']
+            fechas = form.obtener_rango_fechas()
+
+            # Limitar para vista previa
+            empleados_preview = empleados[:5]  # Mostrar solo 5 empleados
+            fechas_preview = fechas[:7]  # Mostrar solo 7 días
+
+            context = {
+                'form': form,
+                'area': area,
+                'empleados': empleados,
+                'empleados_preview': empleados_preview,
+                'estado_predeterminado': estado_predeterminado,
+                'fechas': fechas,
+                'fechas_preview': fechas_preview,
+                'total_empleados': len(empleados),
+                'total_dias': len(fechas),
+                'total_registros': len(empleados) * len(fechas),
+                'title': 'Vista Previa - Incidencias por Rango'
+            }
+
+            return render(request, 'incidencias/vista_previa_rango.html', context)
+        else:
+            messages.error(request, "Por favor, corrija los errores en el formulario.")
+            return redirect('incidencia_rango_dias')
+
+    return redirect('incidencia_rango_dias')
+
+
+# ____________________________________________________________________________________________________________________
 @login_required
 def incidencia_list(request):
     """Lista todas las incidencias con filtros"""
@@ -431,7 +938,7 @@ def incidencia_create_masiva(request):
                 with transaction.atomic():
                     fecha_asistencia = form.cleaned_data['fecha_asistencia']
                     area = form.cleaned_data['area']
-                    empleados = obtener_usuarios_ldap3()
+                    empleados = form.cleaned_data['empleados']
                     estado_predeterminado = form.cleaned_data['estado_predeterminado']
 
                     incidencias_creadas = 0

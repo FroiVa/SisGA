@@ -24,7 +24,7 @@ def obtener_usuarios_ldap3(codigo_area):
         base_dn = ldap_config['USER_BASE']
         filtro = f"(&(objectClass=Trabajador)(CodigoDeDependencia={codigo_area})(EsBaja=False))"
 
-        atributos = ['uid', 'cn', 'sn', 'Correo', 'Area', 'CI', 'CodigoDeDependencia', 'CodigoDelArea', 'Assets']
+        atributos = ['uid', 'cn', 'sn', 'Correo', 'Area', 'CI', 'CodigoDeDependencia', 'CodigoDelArea', 'Assets', 'EsBaja']
 
 
         conn.search(base_dn, filtro, attributes=atributos)
@@ -41,6 +41,7 @@ def obtener_usuarios_ldap3(codigo_area):
                 'dependencia': str(entry.CodigoDeDependencia) if entry.CodigoDeDependencia else '',
                 'codarea': str(entry.CodigoDelArea) if entry.CodigoDelArea else '',
                 'assets': str(entry.Assets) if entry.Assets else '',
+                'baja': str(entry.EsBaja) if entry.EsBaja else '',
             }
             usuarios.append(usuario)
 
@@ -54,4 +55,6 @@ def obtener_usuarios_ldap3(codigo_area):
 if __name__ == "__main__":
     users = obtener_usuarios_ldap3('A3000-1')
     for user in users:
-        print(user['cn'] + " " +user['sn'])
+        # print(user['area'])
+        # print(user['cn'] + " " +user['sn'])
+        print(user)

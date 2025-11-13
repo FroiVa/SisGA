@@ -1,0 +1,346 @@
+<!-- templates/responsable_area/areas_por_usuario.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Áreas de {{ usuario.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1>
+                        <i class="bi bi-building"></i>
+                        Áreas de
+                        {% if es_usuario_actual %}
+                            <strong>Mi Usuario</strong>
+                        {% else %}
+                            <strong>{{ usuario.first_name }} {{ usuario.last_name }}</strong>
+                            <small class="text-muted">({{ usuario.username }})</small>
+                        {% endif %}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Listado de áreas donde el usuario tiene responsabilidades
+                    </p>
+                </div>
+                <div class="btn-group">
+                    <a href="{% url 'buscar_usuarios_areas' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Buscar Usuarios
+                    </a>
+                    {% if puede_editar and not es_usuario_actual %}
+                    <a href="{% url 'gestion_usuario_areas' usuario.id %}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> Gestionar Áreas
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'estadisticas_areas_usuarios' %}" class="btn btn-info">
+                        <i class="bi bi-graph-up"></i> Estadísticas
+                    </a>
+                </div>
+            </div>
+
+            <!-- Información del usuario -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 text-center border-end">
+                                    <div class="mb-3">
+                                        <i class="bi bi-person-circle fs-1 text-primary"></i>
+                                    </div>
+                                    <h5>{{ usuario.username }}</h5>
+                                    <p class="text-muted">Usuario</p>
+                                </div>
+                                <div class="col-md-3 text-center border-end">
+                                    <div class="mb-3">
+                                        <i class="bi bi-person fs-1 text-success"></i>
+                                    </div>
+                                    <h5>{{ usuario.first_name }} {{ usuario.last_name }}</h5>
+                                    <p class="text-muted">Nombre completo</p>
+                                </div>
+                                <div class="col-md-3 text-center border-end">
+                                    <div class="mb-3">
+                                        <i class="bi bi-envelope fs-1 text-warning"></i>
+                                    </div>
+                                    <h5>{{ usuario.email|default:"No especificado" }}</h5>
+                                    <p class="text-muted">Email</p>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <div class="mb-3">
+                                        <i class="bi bi-building fs-1 text-info"></i>
+                                    </div>
+                                    <h3>{{ areas_responsable.count }}</h3>
+                                    <p class="text-muted">Áreas asignadas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de áreas -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Áreas Asignadas</h5>
+                            <span class="badge bg-primary">{{ areas_responsable.count }} áreas</span>
+                        </div>
+                        <div class="card-body">
+                            {% if areas_responsable %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Nombre del Área</th>
+                                                <th>Unidad Padre</th>
+                                                <th>Fecha Asignación</th>
+                                                <th>Estado</th>
+                                                {% if puede_editar %}
+                                                <th>Acciones</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for asignacion in areas_responsable %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ asignacion.area.cod_area }}</strong>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ asignacion.area.nombre }}</strong>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">{{ asignacion.area.unidad_padre }}</small>
+                                                </td>
+                                                <td>
+                                                    {{ asignacion.fecha_asignacion|date:"d/m/Y" }}
+                                                    <br>
+                                                    <small class="text-muted">{{ asignacion.fecha_asignacion|timesince }}</small>
+                                                </td>
+                                                <td>
+                                                    {% if asignacion.activo %}
+                                                        <span class="badge bg-success">Activo</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Inactivo</span>
+                                                    {% endif %}
+                                                </td>
+                                                {% if puede_editar %}
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="{% url 'gestion_area_responsables' asignacion.area.id %}"
+                                                           class="btn btn-outline-primary"
+                                                           title="Gestionar responsables">
+                                                            <i class="bi bi-people"></i>
+                                                        </a>
+                                                        <form method="post"
+                                                              action="{% url 'responsable_area_toggle' asignacion.id %}"
+                                                              class="d-inline">
+                                                            {% csrf_token %}
+                                                            <button type="submit"
+                                                                    class="btn btn-outline-{% if asignacion.activo %}warning{% else %}success{% endif %}"
+                                                                    title="{% if asignacion.activo %}Desactivar{% else %}Activar{% endif %}">
+                                                                <i class="bi bi-{% if asignacion.activo %}pause{% else %}play{% endif %}"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info text-center">
+                                    <i class="bi bi-info-circle"></i>
+                                    {% if es_usuario_actual %}
+                                        No tienes áreas asignadas como responsable.
+                                    {% else %}
+                                        El usuario no tiene áreas asignadas como responsable.
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel lateral -->
+                <div class="col-md-4">
+                    <!-- Acciones rápidas -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Acciones</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                {% if es_usuario_actual %}
+                                    <a href="{% url 'mis_areas_responsable' %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Ver mis áreas en detalle
+                                    </a>
+                                {% endif %}
+
+                                <a href="{% url 'areas_por_usuario_json' usuario.id %}"
+                                   class="btn btn-outline-info" target="_blank">
+                                    <i class="bi bi-code-slash"></i> Ver datos JSON
+                                </a>
+
+                                {% if puede_editar %}
+                                    <a href="{% url 'gestion_usuario_areas' usuario.id %}" class="btn btn-success">
+                                        <i class="bi bi-plus-circle"></i> Gestionar asignaciones
+                                    </a>
+                                {% endif %}
+
+                                <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                    <i class="bi bi-printer"></i> Imprimir listado
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estadísticas rápidas -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Estadísticas</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Total de áreas:</strong>
+                                <span class="badge bg-primary float-end">{{ areas_responsable.count }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Áreas activas:</strong>
+                                <span class="badge bg-success float-end">
+                                    {{ areas_responsable|length }}
+                                </span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Asignado desde:</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {% with primera_asignacion=areas_responsable.first %}
+                                        {% if primera_asignacion %}
+                                            {{ primera_asignacion.fecha_asignacion|date:"d/m/Y" }}
+                                        {% else %}
+                                            No aplica
+                                        {% endif %}
+                                    {% endwith %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Todas las áreas disponibles (solo para administradores) -->
+            {% if puede_editar and todas_areas %}
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Todas las Áreas Disponibles</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre</th>
+                                            <th>Unidad Padre</th>
+                                            <th>Estado</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for area in todas_areas %}
+                                        <tr>
+                                            <td><small>{{ area.cod_area }}</small></td>
+                                            <td><small>{{ area.nombre }}</small></td>
+                                            <td><small class="text-muted">{{ area.unidad_padre }}</small></td>
+                                            <td>
+                                                {% if area.id in areas_responsable_ids %}
+                                                    <span class="badge bg-success btn-sm">Asignada</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary btn-sm">No asignada</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if area.id in areas_responsable_ids %}
+                                                    <small class="text-success">Ya asignada</small>
+                                                {% else %}
+                                                    <a href="{% url 'gestion_usuario_areas' usuario.id %}?agregar_area={{ area.id }}"
+                                                       class="btn btn-success btn-sm">
+                                                        <i class="bi bi-plus"></i> Asignar
+                                                    </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Aquí puedes agregar funcionalidades JavaScript si es necesario
+    console.log('Página de áreas por usuario cargada');
+
+    // Ejemplo: Cargar datos via AJAX
+    function cargarDatosJSON() {
+        fetch(`/api/areas/usuario/{{ usuario.id }}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Datos del usuario:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar datos:', error);
+            });
+    }
+
+    // Opcional: Cargar datos al iniciar
+    // cargarDatosJSON();
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1rem;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.border-end {
+    border-right: 1px solid #dee2e6 !important;
+}
+
+@media print {
+    .btn, .card-header .badge {
+        display: none !important;
+    }
+
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

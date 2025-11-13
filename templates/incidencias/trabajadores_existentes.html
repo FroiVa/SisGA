@@ -1,0 +1,678 @@
+<!-- templates/incidencias/trabajadores_existentes.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-people-fill"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Instrucciones:</strong> Seleccione un área para cargar los trabajadores,
+                        luego elija los trabajadores y configure el rango de días para generar las incidencias.
+                    </div>
+
+                    <form method="post" id="trabajadoresExistentesForm">
+                        {% csrf_token %}
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Columna izquierda - Selección de área y trabajadores -->
+                            <div class="col-md-4">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Selección de Trabajadores</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Área -->
+                                        <div class="mb-3">
+                                            {{ form.area.label_tag }}
+                                            {{ form.area }}
+                                            {% if form.area.errors %}
+                                                <div class="text-danger small">{{ form.area.errors }}</div>
+                                            {% endif %}
+                                            <div class="form-text">{{ form.area.help_text }}</div>
+                                        </div>
+
+                                        <!-- Incluir todos -->
+                                        <div class="mb-3 form-check form-switch">
+                                            {{ form.incluir_todos }}
+                                            <label class="form-check-label" for="{{ form.incluir_todos.id_for_label }}">
+                                                {{ form.incluir_todos.label }}
+                                            </label>
+                                            {% if form.incluir_todos.help_text %}
+                                                <div class="form-text">{{ form.incluir_todos.help_text }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Trabajadores -->
+                                        <div class="mb-3">
+                                            {{ form.trabajadores.label_tag }}
+                                            <div id="loadingTrabajadores" class="text-center" style="display: none;">
+                                                <div class="spinner-border spinner-border-sm" role="status">
+                                                    <span class="visually-hidden">Cargando...</span>
+                                                </div>
+                                                <small class="text-muted"> Cargando trabajadores...</small>
+                                            </div>
+                                            {{ form.trabajadores }}
+                                            {% if form.trabajadores.errors %}
+                                                <div class="text-danger small">{{ form.trabajadores.errors }}</div>
+                                            {% endif %}
+                                            <div class="form-text">{{ form.trabajadores.help_text }}</div>
+                                        </div>
+
+                                        <!-- Contador de trabajadores -->
+                                        <div class="alert alert-light py-2">
+                                            <small>
+                                                <i class="bi bi-people"></i>
+                                                <span id="contadorTrabajadores">0 trabajadores seleccionados</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Estado predeterminado -->
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Configuración</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            {{ form.estado_predeterminado.label_tag }}
+                                            {{ form.estado_predeterminado }}
+                                            {% if form.estado_predeterminado.errors %}
+                                                <div class="text-danger small">{{ form.estado_predeterminado.errors }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Comportamiento con existentes -->
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.comportamiento_existentes.label }}</label>
+                                            <div class="border rounded p-3">
+                                                {% for choice in form.comportamiento_existentes %}
+                                                    <div class="form-check">
+                                                        {{ choice.tag }}
+                                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                            {{ choice.choice_label }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Columna central - Configuración de rango -->
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Configuración del Rango</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Tipo de rango -->
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.tipo_rango.label }}</label>
+                                            <div class="border rounded p-3">
+                                                {% for choice in form.tipo_rango %}
+                                                    <div class="form-check">
+                                                        {{ choice.tag }}
+                                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                            {{ choice.choice_label }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel para rango de fechas -->
+                                        <div id="panelRangoFechas" class="rango-panel">
+                                            <div class="mb-3">
+                                                {{ form.fecha_inicio.label_tag }}
+                                                {{ form.fecha_inicio }}
+                                            </div>
+                                            <div class="mb-3">
+                                                {{ form.fecha_fin.label_tag }}
+                                                {{ form.fecha_fin }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel para mes completo -->
+                                        <div id="panelMesCompleto" class="rango-panel" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        {{ form.mes.label_tag }}
+                                                        {{ form.mes }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        {{ form.año.label_tag }}
+                                                        {{ form.año }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div id="infoMes" class="alert alert-light py-2" style="display: none;">
+                                                <small>
+                                                    <i class="bi bi-calendar"></i>
+                                                    <span id="mesInfoText"></span>
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <!-- Info de rangos predefinidos -->
+                                        <div id="infoRangoPredefinido" class="alert alert-info py-2" style="display: none;">
+                                            <small>
+                                                <i class="bi bi-info-circle"></i>
+                                                <span id="rangoPredefinidoText"></span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Columna derecha - Configuración de días -->
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Configuración de Días</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Excluir fines de semana -->
+                                        <div class="mb-3 form-check form-switch">
+                                            {{ form.excluir_fines_semana }}
+                                            <label class="form-check-label" for="{{ form.excluir_fines_semana.id_for_label }}">
+                                                {{ form.excluir_fines_semana.label }}
+                                            </label>
+                                        </div>
+
+                                        <!-- Días a excluir -->
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ form.dias_excluir.label }}</label>
+                                            {% if form.dias_excluir.help_text %}
+                                                <div class="form-text mb-2">{{ form.dias_excluir.help_text }}</div>
+                                            {% endif %}
+                                            <div class="border rounded p-3">
+                                                {% for choice in form.dias_excluir %}
+                                                    <div class="form-check">
+                                                        {{ choice.tag }}
+                                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                            {{ choice.choice_label }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Resumen y cálculo -->
+                                        <div class="mt-4">
+                                            <div class="card border-warning">
+                                                <div class="card-body text-center">
+                                                    <h5>Resumen</h5>
+                                                    <div class="row">
+                                                        <div class="col-4">
+                                                            <h4 id="resumenTrabajadores">0</h4>
+                                                            <small>Trabajadores</small>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <h4 id="resumenDias">0</h4>
+                                                            <small>Días</small>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <h4 id="resumenRegistros">0</h4>
+                                                            <small>Registros</small>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" id="btnCalcular" class="btn btn-info btn-sm w-100 mt-2">
+                                                        <i class="bi bi-calculator"></i> Calcular
+                                                    </button>
+                                                    <button type="button" id="btnVerificarExistentes" class="btn btn-warning btn-sm w-100 mt-1">
+                                                        <i class="bi bi-search"></i> Verificar Existentes
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detalles del cálculo -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">Detalles del Cálculo</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="detallesCalculo" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <strong>Rango de fechas:</strong>
+                                                    <span id="detalleRangoFechas"></span>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <strong>Total registros:</strong>
+                                                    <span id="detalleTotalRegistros" class="badge bg-primary"></span>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-2">
+                                                <div class="col-md-6">
+                                                    <strong>Primeros trabajadores:</strong><br>
+                                                    <small id="detalleTrabajadores" class="text-muted"></small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <strong>Primeras fechas:</strong><br>
+                                                    <small id="detalleFechas" class="text-muted"></small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="sinCalculo" class="text-center text-muted">
+                                            <i class="bi bi-calculator"></i> Use el botón "Calcular" para ver los detalles
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="{% url 'incidencia_list' %}" class="btn btn-secondary">
+                                            <i class="bi bi-arrow-left"></i> Volver al Listado
+                                        </a>
+                                        <a href="{% url 'incidencia_rango_dias' %}" class="btn btn-outline-primary ms-2">
+                                            <i class="bi bi-list-check"></i> Con Lista Manual
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="bi bi-save"></i> Generar Incidencias
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elementos del DOM
+    const form = document.getElementById('trabajadoresExistentesForm');
+    const areaSelect = document.getElementById('id_area_trabajadores');
+    const trabajadoresSelect = document.getElementById('id_trabajadores');
+    const incluirTodosCheckbox = document.getElementById('id_incluir_todos');
+    const loadingTrabajadores = document.getElementById('loadingTrabajadores');
+    const contadorTrabajadores = document.getElementById('contadorTrabajadores');
+
+    // Elementos de rango
+    const tipoRangoRadios = document.querySelectorAll('input[name="tipo_rango"]');
+    const panelRangoFechas = document.getElementById('panelRangoFechas');
+    const panelMesCompleto = document.getElementById('panelMesCompleto');
+    const infoRangoPredefinido = document.getElementById('infoRangoPredefinido');
+    const rangoPredefinidoText = document.getElementById('rangoPredefinidoText');
+
+    // Elementos de resumen
+    const resumenTrabajadores = document.getElementById('resumenTrabajadores');
+    const resumenDias = document.getElementById('resumenDias');
+    const resumenRegistros = document.getElementById('resumenRegistros');
+    const btnCalcular = document.getElementById('btnCalcular');
+    const btnVerificarExistentes = document.getElementById('btnVerificarExistentes');
+    const detallesCalculo = document.getElementById('detallesCalculo');
+    const sinCalculo = document.getElementById('sinCalculo');
+    const detalleRangoFechas = document.getElementById('detalleRangoFechas');
+    const detalleTotalRegistros = document.getElementById('detalleTotalRegistros');
+    const detalleTrabajadores = document.getElementById('detalleTrabajadores');
+    const detalleFechas = document.getElementById('detalleFechas');
+
+    // Cargar trabajadores cuando cambia el área
+    function cargarTrabajadores() {
+        const areaId = areaSelect.value;
+
+        if (!areaId) {
+            trabajadoresSelect.innerHTML = '<option value="">Seleccione un área primero</option>';
+            actualizarContadorTrabajadores();
+            return;
+        }
+
+        loadingTrabajadores.style.display = 'block';
+        trabajadoresSelect.style.display = 'none';
+
+        fetch(`{% url 'obtener_trabajadores_area' %}?area_id=${areaId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Limpiar y llenar el select
+                trabajadoresSelect.innerHTML = '';
+
+                data.trabajadores.forEach(trabajador => {
+                    const option = document.createElement('option');
+                    option.value = trabajador.id;
+                    option.textContent = `${trabajador.nombre_completo} (${trabajador.username})`;
+                    option.dataset.nombre = trabajador.nombre_completo;
+                    trabajadoresSelect.appendChild(option);
+                });
+
+                // Si "incluir todos" está marcado, seleccionar todos
+                if (incluirTodosCheckbox.checked) {
+                    Array.from(trabajadoresSelect.options).forEach(option => {
+                        option.selected = true;
+                    });
+                }
+
+                contadorTrabajadores.textContent = `${data.total} trabajadores disponibles`;
+                actualizarContadorTrabajadores();
+
+            } else {
+                trabajadoresSelect.innerHTML = '<option value="">Error al cargar trabajadores</option>';
+                contadorTrabajadores.textContent = 'Error al cargar trabajadores';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            trabajadoresSelect.innerHTML = '<option value="">Error al cargar trabajadores</option>';
+            contadorTrabajadores.textContent = 'Error al cargar trabajadores';
+        })
+        .finally(() => {
+            loadingTrabajadores.style.display = 'none';
+            trabajadoresSelect.style.display = 'block';
+        });
+    }
+
+    // Actualizar contador de trabajadores seleccionados
+    function actualizarContadorTrabajadores() {
+        const seleccionados = Array.from(trabajadoresSelect.selectedOptions).length;
+        const total = trabajadoresSelect.options.length;
+
+        resumenTrabajadores.textContent = seleccionados;
+        contadorTrabajadores.textContent = `${seleccionados} de ${total} trabajadores seleccionados`;
+        actualizarResumenRegistros();
+    }
+
+    // Cambiar paneles según tipo de rango
+    function actualizarPanelesRango() {
+        const tipoSeleccionado = document.querySelector('input[name="tipo_rango"]:checked').value;
+
+        panelRangoFechas.style.display = 'none';
+        panelMesCompleto.style.display = 'none';
+        infoRangoPredefinido.style.display = 'none';
+
+        if (tipoSeleccionado === 'rango_fechas') {
+            panelRangoFechas.style.display = 'block';
+        } else if (tipoSeleccionado === 'mes_completo') {
+            panelMesCompleto.style.display = 'block';
+            actualizarInfoMes();
+        } else if (tipoSeleccionado === 'semana_actual') {
+            infoRangoPredefinido.style.display = 'block';
+            rangoPredefinidoText.textContent = 'Se generarán incidencias para la semana actual (lunes a domingo)';
+        } else if (tipoSeleccionado === 'semana_siguiente') {
+            infoRangoPredefinido.style.display = 'block';
+            rangoPredefinidoText.textContent = 'Se generarán incidencias para la semana siguiente (lunes a domingo)';
+        }
+    }
+
+    // Actualizar información del mes
+    function actualizarInfoMes() {
+        const mesSelect = document.getElementById('{{ form.mes.id_for_label }}');
+        const añoInput = document.getElementById('{{ form.año.id_for_label }}');
+        const infoMes = document.getElementById('infoMes');
+        const mesInfoText = document.getElementById('mesInfoText');
+
+        const mes = mesSelect.value;
+        const año = añoInput.value;
+
+        if (mes && año) {
+            // Calcular días del mes (simplificado)
+            const diasMes = new Date(año, mes, 0).getDate();
+            const nombreMes = mesSelect.options[mesSelect.selectedIndex].text;
+
+            mesInfoText.textContent = `${nombreMes} ${año} - ${diasMes} días`;
+            infoMes.style.display = 'block';
+            resumenDias.textContent = diasMes;
+        } else {
+            infoMes.style.display = 'none';
+        }
+
+        actualizarResumenRegistros();
+    }
+
+    // Actualizar resumen de registros
+    function actualizarResumenRegistros() {
+        const trabajadores = parseInt(resumenTrabajadores.textContent) || 0;
+        const dias = parseInt(resumenDias.textContent) || 0;
+        const registros = trabajadores * dias;
+
+        resumenRegistros.textContent = registros;
+
+        // Cambiar color si hay muchos registros
+        if (registros > 1000) {
+            resumenRegistros.className = 'text-danger';
+        } else if (registros > 500) {
+            resumenRegistros.className = 'text-warning';
+        } else {
+            resumenRegistros.className = 'text-dark';
+        }
+    }
+
+    // Calcular rango
+    function calcularRango() {
+        const formData = new FormData(form);
+
+        fetch('{% url "calcular_rango_trabajadores" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resumenDias.textContent = data.total_dias;
+                resumenRegistros.textContent = data.total_registros;
+
+                // Mostrar detalles
+                detalleRangoFechas.textContent = `${data.primera_fecha} - ${data.ultima_fecha}`;
+                detalleTotalRegistros.textContent = data.total_registros;
+                detalleTrabajadores.textContent = data.trabajadores_ejemplo.join(', ');
+                detalleFechas.textContent = data.fechas_ejemplo.join(', ');
+
+                detallesCalculo.style.display = 'block';
+                sinCalculo.style.display = 'none';
+
+                actualizarResumenRegistros();
+            } else {
+                alert('Error al calcular: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al calcular el rango');
+        });
+    }
+
+    // Verificar incidencias existentes
+    function verificarExistentes() {
+        const areaId = areaSelect.value;
+        const trabajadoresIds = Array.from(trabajadoresSelect.selectedOptions).map(opt => opt.value);
+        const fechaInicio = document.getElementById('{{ form.fecha_inicio.id_for_label }}').value;
+        const fechaFin = document.getElementById('{{ form.fecha_fin.id_for_label }}').value;
+
+        if (!areaId || trabajadoresIds.length === 0 || !fechaInicio || !fechaFin) {
+            alert('Complete el área, trabajadores y rango de fechas primero.');
+            return;
+        }
+
+        const data = {
+            area_id: areaId,
+            trabajadores_ids: trabajadoresIds,
+            fecha_inicio: fechaInicio,
+            fecha_fin: fechaFin
+        };
+
+        fetch('{% url "verificar_incidencias_existentes" %}', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let mensaje = `Se encontraron ${data.total_existentes} incidencias existentes.\n\n`;
+
+                if (data.detalle_existentes.length > 0) {
+                    mensaje += "Algunos ejemplos:\n";
+                    data.detalle_existentes.forEach(detalle => {
+                        mensaje += `• ${detalle.empleado}: ${detalle.existentes} incidencias\n`;
+                    });
+                }
+
+                alert(mensaje);
+            } else {
+                alert('Error al verificar: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al verificar incidencias existentes');
+        });
+    }
+
+    // Event listeners
+    areaSelect.addEventListener('change', cargarTrabajadores);
+    trabajadoresSelect.addEventListener('change', actualizarContadorTrabajadores);
+    incluirTodosCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            Array.from(trabajadoresSelect.options).forEach(option => {
+                option.selected = true;
+            });
+        }
+        actualizarContadorTrabajadores();
+    });
+
+    tipoRangoRadios.forEach(radio => {
+        radio.addEventListener('change', actualizarPanelesRango);
+    });
+
+    document.getElementById('{{ form.mes.id_for_label }}').addEventListener('change', actualizarInfoMes);
+    document.getElementById('{{ form.año.id_for_label }}').addEventListener('change', actualizarInfoMes);
+
+    btnCalcular.addEventListener('click', calcularRango);
+    btnVerificarExistentes.addEventListener('click', verificarExistentes);
+
+    // Inicializar
+    actualizarContadorTrabajadores();
+    actualizarPanelesRango();
+    if (areaSelect.value) {
+        cargarTrabajadores();
+    }
+});
+
+// Validación antes de enviar
+document.getElementById('trabajadoresExistentesForm').addEventListener('submit', function(e) {
+    const trabajadores = document.getElementById('id_trabajadores');
+    const estado = document.getElementById('{{ form.estado_predeterminado.id_for_label }}').value;
+    const area = document.getElementById('id_area_trabajadores').value;
+    const registros = parseInt(document.getElementById('resumenRegistros').textContent) || 0;
+
+    const trabajadoresSeleccionados = Array.from(trabajadores.selectedOptions).length;
+
+    let errores = [];
+
+    if (!area) errores.push('El área es obligatoria');
+    if (trabajadoresSeleccionados === 0) errores.push('Debe seleccionar al menos un trabajador');
+    if (!estado) errores.push('El estado es obligatorio');
+    if (registros === 0) errores.push('No hay registros para generar');
+    if (registros > 2000) errores.push('Demasiados registros (máximo 2000)');
+
+    if (errores.length > 0) {
+        e.preventDefault();
+        alert('Errores de validación:\n• ' + errores.join('\n• '));
+        return false;
+    }
+
+    if (!confirm(`¿Está seguro de generar ${registros} registros de incidencias?`)) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+
+<style>
+.rango-panel {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+#resumenTrabajadores,
+#resumenDias,
+#resumenRegistros {
+    margin-bottom: 0.5rem;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+    font-weight: bold;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+    font-weight: bold;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+#id_trabajadores {
+    min-height: 200px;
+}
+
+#loadingTrabajadores {
+    padding: 2rem;
+}
+</style>
+{% endblock %}
