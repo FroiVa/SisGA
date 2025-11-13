@@ -22,7 +22,7 @@ def obtener_usuarios_ldap3(codigo_area):
                           auto_bind=True)
 
         base_dn = ldap_config['USER_BASE']
-        filtro = f"(&(objectClass=Trabajador)(CodigoDeDependencia={codigo_area}))"
+        filtro = f"(&(objectClass=Trabajador)(CodigoDeDependencia={codigo_area})(EsBaja=False))"
 
         atributos = ['uid', 'cn', 'sn', 'Correo', 'Area', 'CI', 'CodigoDeDependencia', 'CodigoDelArea', 'Assets']
 
@@ -54,4 +54,4 @@ def obtener_usuarios_ldap3(codigo_area):
 if __name__ == "__main__":
     users = obtener_usuarios_ldap3('A3000-1')
     for user in users:
-        print(user)
+        print(user['cn'])

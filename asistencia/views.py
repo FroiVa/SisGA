@@ -17,7 +17,7 @@ from datetime import datetime, date
 import json
 import csv
 import io
-from .models import ResponsableArea, Area, Incidencia
+from .models import ResponsableArea, Area, Incidencia, User
 from .forms import (
     ResponsableAreaForm,
     BuscarCrearUsuarioForm,
@@ -80,11 +80,16 @@ def dashboard_view(request):
     """
     Vista del dashboard después del login
     """
-    areas = ResponsableArea.objects.filter(usuario=request.user).select_related('area').order_by('area__nombre')
-
+    usuario = request.user
+    areas = ResponsableArea.objects.filter(usuario=usuario, activo=True).select_related('area').order_by('area__nombre')
+    trabajadores_list = []
+    for area in areas:
+        trabajadores = obtener_usuarios_ldap3(area.area.cod_area)
+    trabajadores_list.extend(trabajadores)
     return render(request, 'dashboard.html', {
         'user': request.user,
         'areas': areas,
+        'trabajadores_list': trabajadores_list,
         'areas_responsable': request.user.areas_responsable.all() if hasattr(request.user, 'areas_responsable') else []
     })
 
