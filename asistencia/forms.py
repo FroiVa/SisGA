@@ -5,7 +5,10 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
-from .models import ResponsableArea, Area
+from .models import ResponsableArea, Area, Incidencia
+from django.contrib.auth.models import User
+from django.utils import timezone
+import datetime
 import re
 
 
@@ -310,3 +313,237 @@ class AsignacionRapidaForm(forms.Form):
                     "El nombre de usuario contiene caracteres no válidos."
                 )
         return username
+
+
+class IncidenciaForm(forms.ModelForm):
+    """Formulario individual para una incidencia"""
+
+    class Meta:
+        model = Incidencia
+        fields = ['area', 'empleado', 'estado', 'fecha_asistencia']
+        widgets = {
+            'area': forms.Select(attrs={'class': 'form-select'}),
+            'empleado': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del empleado'
+            }),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+            'fecha_asistencia': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+        }
+        labels = {
+            'area': 'Área',
+            'empleado': 'Empleado',
+            'estado': 'Estado de Asistencia',
+            'fecha_asistencia': 'Fecha de Asistencia'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ordenar áreas por nombre
+        self.fields['area'].queryset = Area.objects.all().order_by('nombre')
+        # Establecer fecha por defecto como hoy
+        if not self.instance.pk:
+            self.fields['fecha_asistencia'].initial = datetime.date.today()
+
+
+class IncidenciaMasivaForm(forms.Form):
+    """Formulario para creación masiva de incidencias"""
+
+    fecha_asistencia = forms.DateField(
+        label="Fecha de Asistencia",
+        initial=datetime.date.today,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+
+    area = forms.ModelChoiceField(
+        queryset=Area.objects.all().order_by('nombre'),
+        label="Área",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True
+    )
+
+    empleados = forms.CharField(
+        label="Lista de Empleados",
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': '10',
+            'placeholder': 'Ingrese un empleado por línea\nEjemplo:\nJuan Pérez\nMaría García\nCarlos López'
+        }),
+        help_text="Un empleado por línea. Use el formato: Nombre Apellido"
+    )
+
+    estado_predeterminado = forms.ChoiceField(
+        choices=[('', '-- Seleccionar Estado --')] + list(Incidencia.CHOICES.items()),
+        label="Estado Predeterminado",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True
+    )
+
+    def clean_empleados(self):
+        empleados = self.cleaned_data.get('empleados', '')
+        if empleados:
+            # Dividir por líneas y limpiar
+            lista_empleados = [emp.strip() for emp in empleados.split('\n') if emp.strip()]
+
+            if not lista_empleados:
+                raise ValidationError("Debe ingresar al menos un empleado.")
+
+            # Validar que no haya nombres vacíos después de limpiar
+            lista_empleados = [emp for emp in lista_empleados if emp]
+
+            if len(lista_empleados) > 100:
+                raise ValidationError("No puede ingresar más de 100 empleados a la vez.")
+
+            return lista_empleados
+        return []
+
+    def clean_fecha_asistencia(self):
+        fecha = self.cleaned_data.get('fecha_asistencia')
+        if fecha:
+            if fecha > datetime.date.today():
+                raise ValidationError("La fecha no puede ser futura.")
+        return fecha
+
+
+class IncidenciaImportarForm(forms.Form):
+    """Formulario para importar incidencias desde archivo"""
+
+    archivo = forms.FileField(
+        label="Archivo CSV",
+        help_text="Formato: empleado,area_codigo,estado,fecha (YYYY-MM-DD)",
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.csv,.txt'
+        })
+    )
+
+    sobrescribir = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Sobrescribir incidencias existentes",
+        help_text="Si está marcado, se eliminarán las incidencias existentes para las mismas fechas y empleados",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+    def clean_archivo(self):
+        archivo = self.cleaned_data.get('archivo')
+        if archivo:
+            if not archivo.name.endswith('.csv'):
+                raise ValidationError("Solo se permiten archivos CSV.")
+
+            # Verificar tamaño (máximo 5MB)
+            if archivo.size > 5 * 1024 * 1024:
+                raise ValidationError("El archivo no puede ser mayor a 5MB.")
+        return archivo
+
+
+class FiltroIncidenciasForm(forms.Form):
+    """Formulario para filtrar incidencias"""
+
+    area = forms.ModelChoiceField(
+        queryset=Area.objects.all().order_by('nombre'),
+        required=False,
+        empty_label="Todas las áreas",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    empleado = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Buscar por empleado...'
+        })
+    )
+
+    estado = forms.ChoiceField(
+        choices=[('', 'Todos los estados')] + list(Incidencia.CHOICES.items()),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    fecha_desde = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        label="Desde"
+    )
+
+    fecha_hasta = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        label="Hasta"
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_desde = cleaned_data.get('fecha_desde')
+        fecha_hasta = cleaned_data.get('fecha_hasta')
+
+        if fecha_desde and fecha_hasta:
+            if fecha_desde > fecha_hasta:
+                raise ValidationError("La fecha 'Desde' no puede ser mayor que la fecha 'Hasta'.")
+
+        return cleaned_data
+
+    def filtrar_queryset(self, queryset):
+        if self.is_valid():
+            area = self.cleaned_data.get('area')
+            empleado = self.cleaned_data.get('empleado')
+            estado = self.cleaned_data.get('estado')
+            fecha_desde = self.cleaned_data.get('fecha_desde')
+            fecha_hasta = self.cleaned_data.get('fecha_hasta')
+
+            if area:
+                queryset = queryset.filter(area=area.cod_area)
+            if empleado:
+                queryset = queryset.filter(empleado__icontains=empleado)
+            if estado:
+                queryset = queryset.filter(estado=estado)
+            if fecha_desde:
+                queryset = queryset.filter(fecha_asistencia__gte=fecha_desde)
+            if fecha_hasta:
+                queryset = queryset.filter(fecha_asistencia__lte=fecha_hasta)
+
+        return queryset
+
+
+class IncidenciaEdicionMasivaForm(forms.Form):
+    """Formulario para edición masiva de incidencias"""
+
+    incidencias = forms.ModelMultipleChoiceField(
+        queryset=Incidencia.objects.all(),
+        widget=forms.MultipleHiddenInput()
+    )
+
+    nuevo_estado = forms.ChoiceField(
+        choices=[('', '-- Seleccionar Nuevo Estado --')] + list(Incidencia.CHOICES.items()),
+        label="Nuevo Estado",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True
+    )
+
+    nueva_fecha = forms.DateField(
+        required=False,
+        label="Nueva Fecha (opcional)",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+
+    def clean_incidencias(self):
+        incidencias = self.cleaned_data.get('incidencias')
+        if not incidencias:
+            raise ValidationError("Debe seleccionar al menos una incidencia.")
+        return incidencias

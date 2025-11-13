@@ -1,0 +1,264 @@
+<!-- templates/incidencias/edicion_masiva.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="bi bi-pencil-square"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Está editando <strong>{{ incidencias.count }}</strong> incidencia(s) seleccionada(s).
+                    </div>
+
+                    <form method="post" id="edicionMasivaForm">
+                        {% csrf_token %}
+
+                        {% for field in form.hidden_fields %}
+                            {{ field }}
+                        {% endfor %}
+
+                        <div class="row">
+                            <!-- Configuración de cambios -->
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Cambios a Aplicar</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Nuevo Estado -->
+                                        <div class="mb-3">
+                                            {{ form.nuevo_estado.label_tag }}
+                                            {{ form.nuevo_estado }}
+                                            {% if form.nuevo_estado.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.nuevo_estado.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Nueva Fecha -->
+                                        <div class="mb-3">
+                                            {{ form.nueva_fecha.label_tag }}
+                                            {{ form.nueva_fecha }}
+                                            {% if form.nueva_fecha.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.nueva_fecha.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <div class="form-text">
+                                                Dejar vacío para mantener la fecha actual de cada incidencia.
+                                            </div>
+                                        </div>
+
+                                        <!-- Vista previa de cambios -->
+                                        <div class="mt-4">
+                                            <h6>Vista Previa de Cambios</h6>
+                                            <div class="border rounded p-3 bg-light">
+                                                <div id="vistaPreviaCambios">
+                                                    <em class="text-muted">Los cambios aparecerán aquí...</em>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lista de incidencias a modificar -->
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Incidencias Seleccionadas</h6>
+                                        <span class="badge bg-primary">{{ incidencias.count }}</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div style="max-height: 400px; overflow-y: auto;">
+                                            <div class="list-group">
+                                                {% for incidencia in incidencias %}
+                                                <div class="list-group-item">
+                                                    <div class="d-flex w-100 justify-content-between">
+                                                        <h6 class="mb-1">{{ incidencia.empleado }}</h6>
+                                                        <small>{{ incidencia.fecha_asistencia|date:"d/m/Y" }}</small>
+                                                    </div>
+                                                    <p class="mb-1">
+                                                        <span class="badge bg-secondary">{{ incidencia.area }}</span>
+                                                        <span class="badge estado-badge estado-{{ incidencia.estado|slugify }}">
+                                                            {{ incidencia.estado }}
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                                {% empty %}
+                                                <div class="text-center text-muted py-4">
+                                                    <i class="bi bi-inbox"></i> No hay incidencias seleccionadas
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen de cambios -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">Resumen de la Operación</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-3">
+                                                <h4>{{ incidencias.count }}</h4>
+                                                <small class="text-muted">Incidencias a modificar</small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <h4 id="resumenEstado">-</h4>
+                                                <small class="text-muted">Nuevo estado</small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <h4 id="resumenFecha">-</h4>
+                                                <small class="text-muted">Nueva fecha</small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <h4 id="resumenCambios">-</h4>
+                                                <small class="text-muted">Cambios aplicados</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="{% url 'incidencia_list' %}" class="btn btn-secondary">
+                                            <i class="bi bi-arrow-left"></i> Cancelar
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-warning btn-lg">
+                                            <i class="bi bi-check-circle"></i> Aplicar Cambios
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nuevoEstado = document.getElementById('{{ form.nuevo_estado.id_for_label }}');
+    const nuevaFecha = document.getElementById('{{ form.nueva_fecha.id_for_label }}');
+    const vistaPrevia = document.getElementById('vistaPreviaCambios');
+
+    function actualizarVistaPrevia() {
+        const estadoSeleccionado = nuevoEstado.options[nuevoEstado.selectedIndex].text;
+        const fechaSeleccionada = nuevaFecha.value;
+
+        let cambios = [];
+
+        if (nuevoEstado.value) {
+            cambios.push(`<strong>Estado:</strong> Todos cambiarán a "${estadoSeleccionado}"`);
+        }
+
+        if (fechaSeleccionada) {
+            cambios.push(`<strong>Fecha:</strong> Todos cambiarán a "${fechaSeleccionada}"`);
+        }
+
+        if (cambios.length > 0) {
+            vistaPrevia.innerHTML = cambios.map(cambio =>
+                `<div class="mb-2"><i class="bi bi-arrow-right text-primary"></i> ${cambio}</div>`
+            ).join('');
+        } else {
+            vistaPrevia.innerHTML = '<em class="text-muted">Seleccione al menos un cambio para aplicar...</em>';
+        }
+
+        actualizarResumen();
+    }
+
+    function actualizarResumen() {
+        document.getElementById('resumenEstado').textContent =
+            nuevoEstado.value ? nuevoEstado.options[nuevoEstado.selectedIndex].text : 'Mantener';
+
+        document.getElementById('resumenFecha').textContent =
+            nuevaFecha.value ? nuevaFecha.value : 'Mantener';
+
+        const cambios = [];
+        if (nuevoEstado.value) cambios.push('estado');
+        if (nuevaFecha.value) cambios.push('fecha');
+        document.getElementById('resumenCambios').textContent = cambios.length > 0 ? cambios.join(', ') : 'Ninguno';
+    }
+
+    // Event listeners
+    nuevoEstado.addEventListener('change', actualizarVistaPrevia);
+    nuevaFecha.addEventListener('change', actualizarVistaPrevia);
+
+    // Inicializar
+    actualizarVistaPrevia();
+});
+
+document.getElementById('edicionMasivaForm').addEventListener('submit', function(e) {
+    const nuevoEstado = document.getElementById('{{ form.nuevo_estado.id_for_label }}').value;
+    const incidenciasCount = {{ incidencias.count }};
+
+    if (!nuevoEstado) {
+        e.preventDefault();
+        alert('Debe seleccionar un nuevo estado para las incidencias.');
+        return;
+    }
+
+    if (incidenciasCount === 0) {
+        e.preventDefault();
+        alert('No hay incidencias seleccionadas para modificar.');
+        return;
+    }
+
+    if (!confirm(`¿Está seguro de aplicar los cambios a ${incidenciasCount} incidencia(s)?`)) {
+        e.preventDefault();
+    }
+});
+</script>
+
+<style>
+.estado-badge {
+    font-size: 0.7em;
+}
+
+.list-group-item:hover {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+#vistaPreviaCambios div {
+    padding: 0.5rem;
+    border-left: 3px solid #0dcaf0;
+    background-color: white;
+    margin-bottom: 0.5rem;
+    border-radius: 0.25rem;
+}
+</style>
+{% endblock %}

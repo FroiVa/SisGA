@@ -1,0 +1,379 @@
+<!-- templates/incidencias/form_masiva.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-list-check"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Instrucciones:</strong> Ingrese un empleado por línea.
+                        El sistema creará una incidencia para cada empleado con el estado y fecha seleccionados.
+                    </div>
+
+                    <form method="post" id="incidenciaMasivaForm">
+                        {% csrf_token %}
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Columna izquierda - Configuración -->
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Configuración</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Fecha -->
+                                        <div class="mb-3">
+                                            {{ form.fecha_asistencia.label_tag }}
+                                            {{ form.fecha_asistencia }}
+                                            {% if form.fecha_asistencia.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.fecha_asistencia.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Área -->
+                                        <div class="mb-3">
+                                            {{ form.area.label_tag }}
+                                            {{ form.area }}
+                                            {% if form.area.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.area.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Estado -->
+                                        <div class="mb-3">
+                                            {{ form.estado_predeterminado.label_tag }}
+                                            {{ form.estado_predeterminado }}
+                                            {% if form.estado_predeterminado.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.estado_predeterminado.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Información del área seleccionada -->
+                                        <div id="infoArea" class="mt-3 p-2 bg-light rounded" style="display: none;">
+                                            <small>
+                                                <strong id="areaNombre"></strong><br>
+                                                <span id="areaCodigo" class="text-muted"></span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Plantillas rápidas -->
+                                <div class="card mt-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Plantillas Rápidas</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                                    onclick="cargarPlantilla('asistencia')">
+                                                <i class="bi bi-people"></i> Lista de Asistencia
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning btn-sm"
+                                                    onclick="cargarPlantilla('ausentes')">
+                                                <i class="bi bi-person-x"></i> Empleados Ausentes
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info btn-sm"
+                                                    onclick="limpiarLista()">
+                                                <i class="bi bi-eraser"></i> Limpiar Lista
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Columna derecha - Lista de empleados -->
+                            <div class="col-md-8">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Lista de Empleados</h6>
+                                        <span class="badge bg-primary" id="contadorEmpleados">0 empleados</span>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form.empleados.label_tag }}
+                                        {{ form.empleados }}
+                                        {% if form.empleados.errors %}
+                                            <div class="text-danger small">
+                                                {% for error in form.empleados.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i>
+                                                Formato: Un empleado por línea. Ejemplo: "Juan Pérez"
+                                            </small>
+                                        </div>
+
+                                        <!-- Vista previa -->
+                                        <div class="mt-3">
+                                            <h6>Vista Previa</h6>
+                                            <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                                <div id="vistaPrevia">
+                                                    <em class="text-muted">La vista previa aparecerá aquí...</em>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen y botones -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">Resumen de la Operación</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3 text-center">
+                                                <h4 id="resumenCantidad">0</h4>
+                                                <small class="text-muted">Empleados a procesar</small>
+                                            </div>
+                                            <div class="col-md-3 text-center">
+                                                <h4 id="resumenEstado">-</h4>
+                                                <small class="text-muted">Estado predeterminado</small>
+                                            </div>
+                                            <div class="col-md-3 text-center">
+                                                <h4 id="resumenFecha">-</h4>
+                                                <small class="text-muted">Fecha de asistencia</small>
+                                            </div>
+                                            <div class="col-md-3 text-center">
+                                                <h4 id="resumenArea">-</h4>
+                                                <small class="text-muted">Área seleccionada</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="{% url 'incidencia_list' %}" class="btn btn-secondary">
+                                            <i class="bi bi-arrow-left"></i> Volver al Listado
+                                        </a>
+                                        <a href="{% url 'incidencia_create_individual' %}" class="btn btn-outline-primary ms-2">
+                                            <i class="bi bi-person-plus"></i> Registro Individual
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-info me-2" onclick="validarFormulario()">
+                                            <i class="bi bi-check-circle"></i> Validar
+                                        </button>
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="bi bi-save"></i> Guardar Incidencias
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const empleadosTextarea = document.getElementById('{{ form.empleados.id_for_label }}');
+    const fechaField = document.getElementById('{{ form.fecha_asistencia.id_for_label }}');
+    const areaField = document.getElementById('{{ form.area.id_for_label }}');
+    const estadoField = document.getElementById('{{ form.estado_predeterminado.id_for_label }}');
+    const contadorEmpleados = document.getElementById('contadorEmpleados');
+    const vistaPrevia = document.getElementById('vistaPrevia');
+    const infoArea = document.getElementById('infoArea');
+    const areaNombre = document.getElementById('areaNombre');
+    const areaCodigo = document.getElementById('areaCodigo');
+
+    // Actualizar contador y vista previa
+    function actualizarVistaPrevia() {
+        const texto = empleadosTextarea.value;
+        const lineas = texto.split('\n').filter(linea => linea.trim());
+
+        contadorEmpleados.textContent = `${lineas.length} empleados`;
+
+        if (lineas.length > 0) {
+            vistaPrevia.innerHTML = lineas.map(empleado =>
+                `<div class="border-bottom py-1"><i class="bi bi-person"></i> ${empleado.trim()}</div>`
+            ).join('');
+        } else {
+            vistaPrevia.innerHTML = '<em class="text-muted">La vista previa aparecerá aquí...</em>';
+        }
+
+        actualizarResumen();
+    }
+
+    // Actualizar resumen
+    function actualizarResumen() {
+        const lineas = empleadosTextarea.value.split('\n').filter(linea => linea.trim());
+        document.getElementById('resumenCantidad').textContent = lineas.length;
+        document.getElementById('resumenEstado').textContent = estadoField.options[estadoField.selectedIndex].text;
+        document.getElementById('resumenFecha').textContent = fechaField.value;
+        document.getElementById('resumenArea').textContent = areaField.options[areaField.selectedIndex].text;
+    }
+
+    // Actualizar información del área
+    function actualizarInfoArea() {
+        const areaSeleccionada = areaField.options[areaField.selectedIndex];
+        if (areaField.value) {
+            areaNombre.textContent = areaSeleccionada.text;
+            areaCodigo.textContent = `Código: ${areaField.value}`;
+            infoArea.style.display = 'block';
+        } else {
+            infoArea.style.display = 'none';
+        }
+        actualizarResumen();
+    }
+
+    // Event listeners
+    empleadosTextarea.addEventListener('input', actualizarVistaPrevia);
+    fechaField.addEventListener('change', actualizarResumen);
+    areaField.addEventListener('change', actualizarInfoArea);
+    estadoField.addEventListener('change', actualizarResumen);
+
+    // Inicializar
+    actualizarVistaPrevia();
+    actualizarInfoArea();
+});
+
+function validarFormulario() {
+    const empleados = document.getElementById('{{ form.empleados.id_for_label }}').value;
+    const fecha = document.getElementById('{{ form.fecha_asistencia.id_for_label }}').value;
+    const area = document.getElementById('{{ form.area.id_for_label }}').value;
+    const estado = document.getElementById('{{ form.estado_predeterminado.id_for_label }}').value;
+
+    let errores = [];
+
+    if (!fecha) errores.push('La fecha es obligatoria');
+    if (!area) errores.push('El área es obligatoria');
+    if (!estado) errores.push('El estado es obligatorio');
+
+    const lineas = empleados.split('\n').filter(linea => linea.trim());
+    if (lineas.length === 0) errores.push('Debe ingresar al menos un empleado');
+
+    if (errores.length > 0) {
+        alert('Errores de validación:\n• ' + errores.join('\n• '));
+        return false;
+    } else {
+        alert('✓ Formulario válido. Puede proceder a guardar.');
+        return true;
+    }
+}
+
+function cargarPlantilla(tipo) {
+    let contenido = '';
+
+    switch(tipo) {
+        case 'asistencia':
+            contenido = `Juan Pérez
+María García
+Carlos López
+Ana Martínez
+Pedro Rodríguez
+Laura Hernández
+Miguel Sánchez
+Isabel Díaz
+Francisco Gómez
+Elena Fernández`;
+            break;
+        case 'ausentes':
+            contenido = `Roberto Jiménez
+Carmen Ruiz
+Daniel Moreno
+Sara Álvarez
+Javier Romero`;
+            break;
+    }
+
+    document.getElementById('{{ form.empleados.id_for_label }}').value = contenido;
+    document.getElementById('{{ form.empleados.id_for_label }}').dispatchEvent(new Event('input'));
+}
+
+function limpiarLista() {
+    if (confirm('¿Está seguro de limpiar la lista de empleados?')) {
+        document.getElementById('{{ form.empleados.id_for_label }}').value = '';
+        document.getElementById('{{ form.empleados.id_for_label }}').dispatchEvent(new Event('input'));
+    }
+}
+
+// Validación antes de enviar
+document.getElementById('incidenciaMasivaForm').addEventListener('submit', function(e) {
+    if (!validarFormulario()) {
+        e.preventDefault();
+        return;
+    }
+
+    const lineas = document.getElementById('{{ form.empleados.id_for_label }}').value.split('\n').filter(linea => linea.trim());
+    if (!confirm(`¿Está seguro de crear ${lineas.length} incidencias?`)) {
+        e.preventDefault();
+    }
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+#vistaPrevia div {
+    padding: 0.25rem 0.5rem;
+}
+
+#vistaPrevia div:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+#infoArea {
+    border-left: 4px solid #198754;
+}
+</style>
+{% endblock %}

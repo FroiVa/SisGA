@@ -16,4 +16,17 @@ urlpatterns = [
     path('responsables/buscar-usuario-ajax/', views.buscar_usuario_ajax, name='buscar_usuario_ajax'),
     path('usuarios/crear/', views.gestion_usuario_completa, name='crear_usuario'),
     path('usuarios/editar/<int:usuario_id>/', views.gestion_usuario_completa, name='editar_usuario'),
+
+    # Incidencias...
+    path('incidencias/', views.incidencia_list, name='incidencia_list'),
+    path('incidencias/crear/', views.incidencia_create_individual, name='incidencia_create_individual'),
+    path('incidencias/crear-masiva/', views.incidencia_create_masiva, name='incidencia_create_masiva'),
+    path('incidencias/importar/', views.incidencia_importar, name='incidencia_importar'),
+    path('incidencias/edicion-masiva/', views.incidencia_edicion_masiva, name='incidencia_edicion_masiva'),
+    path('incidencias/exportar/', views.incidencia_exportar, name='incidencia_exportar'),
+    path('incidencias/dashboard/', views.incidencia_dashboard, name='incidencia_dashboard'),
+
+    # API...
+    path('api/empleados-area/<int:area_id>/', views.get_empleados_area, name='get_empleados_area'),
+    path('api/verificar-incidencia/', views.verificar_incidencia_existente, name='verificar_incidencia_existente'),
 ]

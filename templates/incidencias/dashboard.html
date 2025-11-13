@@ -1,0 +1,295 @@
+<!-- templates/incidencias/dashboard.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Incidencias{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mb-4">
+                <i class="bi bi-speedometer2"></i>
+                Dashboard de Incidencias
+            </h1>
+
+            <!-- Estadísticas principales -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Total General</h5>
+                                    <h2 class="card-text">{{ total_incidencias }}</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-clipboard-data fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Hoy</h5>
+                                    <h2 class="card-text">{{ incidencias_hoy }}</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-calendar-day fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Este Mes</h5>
+                                    <h2 class="card-text">{{ incidencias_mes }}</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-calendar-month fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Promedio/Día</h5>
+                                    <h2 class="card-text">{{ incidencias_mes|divisibleby:30|default:0 }}</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-graph-up fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Distribución por estado (hoy) -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Distribución por Estado - Hoy</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if estados_hoy %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Estado</th>
+                                                <th>Cantidad</th>
+                                                <th>Porcentaje</th>
+                                                <th>Barra</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for estado in estados_hoy %}
+                                            <tr>
+                                                <td>
+                                                    <span class="badge estado-badge estado-{{ estado.estado|slugify }}">
+                                                        {{ estados_choices|get_item:estado.estado }}
+                                                    </span>
+                                                </td>
+                                                <td><strong>{{ estado.total }}</strong></td>
+                                                <td>{{ estado.total|divisibleby:incidencias_hoy|multiply:100|floatformat:1 }}%</td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar"
+                                                             style="width: {{ estado.total|divisibleby:incidencias_hoy|multiply:100 }}%;
+                                                                    background-color: {% cycle '#198754' '#ffc107' '#dc3545' '#0dcaf0' '#6610f2' as colors %};">
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info text-center">
+                                    <i class="bi bi-info-circle"></i>
+                                    No hay incidencias registradas para hoy.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top áreas con más incidencias -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top Áreas - Este Mes</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if areas_top %}
+                                <div class="list-group">
+                                    {% for area in areas_top %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ area.area }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ area.total }} incidencias</small>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">{{ area.total }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info text-center">
+                                    <i class="bi bi-info-circle"></i>
+                                    No hay datos para este mes.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empleados con más incidencias -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Empleados con Más Incidencias - Este Mes</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if empleados_top %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Empleado</th>
+                                                <th>Total Incidencias</th>
+                                                <th>Promedio/Semana</th>
+                                                <th>Tendencia</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for empleado in empleados_top %}
+                                            <tr>
+                                                <td>{{ forloop.counter }}</td>
+                                                <td>
+                                                    <strong>{{ empleado.empleado }}</strong>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary">{{ empleado.total }}</span>
+                                                </td>
+                                                <td>{{ empleado.total|divisibleby:4|floatformat:1 }}</td>
+                                                <td>
+                                                    {% if empleado.total > 10 %}
+                                                        <span class="badge bg-danger">Alta</span>
+                                                    {% elif empleado.total > 5 %}
+                                                        <span class="badge bg-warning">Media</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">Baja</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info text-center">
+                                    <i class="bi bi-info-circle"></i>
+                                    No hay datos de empleados para este mes.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acciones rápidas -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Acciones Rápidas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 text-center">
+                                    <a href="{% url 'incidencia_create_individual' %}" class="btn btn-primary w-100 mb-2">
+                                        <i class="bi bi-plus-circle"></i><br>
+                                        Individual
+                                    </a>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <a href="{% url 'incidencia_create_masiva' %}" class="btn btn-success w-100 mb-2">
+                                        <i class="bi bi-list-check"></i><br>
+                                        Por Lista
+                                    </a>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <a href="{% url 'incidencia_importar' %}" class="btn btn-info w-100 mb-2">
+                                        <i class="bi bi-upload"></i><br>
+                                        Importar
+                                    </a>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <a href="{% url 'incidencia_list' %}" class="btn btn-warning w-100 mb-2">
+                                        <i class="bi bi-list-ul"></i><br>
+                                        Ver Todas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Aquí puedes agregar gráficos con Chart.js si lo deseas
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1rem;
+}
+
+.estado-badge {
+    font-size: 0.8em;
+    padding: 0.4em 0.6em;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.btn {
+    padding: 1rem 0.5rem;
+}
+</style>
+{% endblock %}

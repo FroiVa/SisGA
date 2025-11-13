@@ -59,20 +59,20 @@ class ResponsableArea(models.Model):
         return cls.objects.filter(usuario=usuario, area=area, activo=True).exists()
 
 
-CHOICES = {
-    'Asistió puntual': 'Asistió puntual',
-    'Asistió con retardo': 'Asistió con retardo',
-    'Falta justificada': 'Falta justificada',
-    'Falta injustificada': 'Falta injustificada',
-    'Vacaciones': 'Vacaciones',
-    'Incapacidad médica': 'Incapacidad',
-    'Permiso con goce de sueldo': 'Permiso con goce de sueldo',
-    'Permiso sin goce de sueldo': 'Permiso sin goce de sueldo',
-    'Teletrabajo': 'Teletrabajo',
-    'Licencia especial': 'Licencia especial',
-}
 
 class Incidencia(models.Model):
+    CHOICES = {
+        'Asistió puntual': 'Asistió puntual',
+        'Asistió con retardo': 'Asistió con retardo',
+        'Falta justificada': 'Falta justificada',
+        'Falta injustificada': 'Falta injustificada',
+        'Vacaciones': 'Vacaciones',
+        'Incapacidad médica': 'Incapacidad',
+        'Permiso con goce de sueldo': 'Permiso con goce de sueldo',
+        'Permiso sin goce de sueldo': 'Permiso sin goce de sueldo',
+        'Teletrabajo': 'Teletrabajo',
+        'Licencia especial': 'Licencia especial',
+    }
     area = models.CharField(max_length=15, help_text='FK a RhUnidadesOrganizativas', db_column='Area')
     uid = models.CharField(max_length=100, help_text='Usuario LDAP', db_column='UID')
     empleado = models.CharField(max_length=100, help_text='FK a EmpleadosGral', db_column='Empleado')
