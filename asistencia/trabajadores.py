@@ -54,4 +54,4 @@ def obtener_usuarios_ldap3(codigo_area):
 if __name__ == "__main__":
     users = obtener_usuarios_ldap3('A3000-1')
     for user in users:
-        print(user['cn'])
+        print(user['cn'] + " " +user['sn'])
