@@ -73,13 +73,14 @@ class Incidencia(models.Model):
         'Teletrabajo': 'Teletrabajo',
         'Licencia especial': 'Licencia especial',
     }
-    area = models.CharField(max_length=15, help_text='FK a RhUnidadesOrganizativas', db_column='Area')
-    uid = models.CharField(max_length=100, help_text='Usuario LDAP', db_column='UID')
+    area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
+    uid = models.CharField(max_length=100, help_text='Usuario LDAP', db_column='UID', default=None)
     empleado = models.CharField(max_length=100, help_text='FK a EmpleadosGral', db_column='Empleado')
-    estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado')
+    estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado', default="Pendiente")
     fecha_asistencia = models.DateField(db_column='Fecha_Asistencia', default=datetime.date.today)
 
     class Meta:
         verbose_name = 'Incidencia'
         verbose_name_plural = 'Incidencias'
         db_table = 'incidencia'
+        unique_together = ['uid', 'fecha_asistencia']
