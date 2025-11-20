@@ -84,18 +84,17 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
     },
-    'sqlserver': {  # SQL Server - base de datos existente
-        'ENGINE': 'mssql',
-        'NAME': 'NOMINA',
-        'USER': 'ldap-export',
-        'PASSWORD': 'ldap-export',
-        'HOST': '10.6.240.132',
-        'PORT': '1433',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'extra_params': "charset=utf8",
-        },
-    }
+    # 'sqlserver': {  # SQL Server - base de datos existente
+    #     'ENGINE': 'mssql',
+    #     'NAME': 'NOMINA',
+    #     'USER': 'ldap-export',
+    #     'PASSWORD': 'ldap-export',
+    #     'HOST': '10.6.240.132',
+    #     'PORT': '1433',
+    #     'OPTIONS': {
+    #         'driver': 'ODBC Driver 17 for SQL Server',
+    #     },
+    # }
 }
 
 DATABASE_ROUTERS = ['asistencia.routers.DatabaseRouter']

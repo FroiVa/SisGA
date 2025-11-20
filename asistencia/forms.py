@@ -5,8 +5,6 @@ from django.core.exceptions import ValidationError
 from .models import ResponsableArea, Area, Incidencia
 from django.contrib.auth.models import User
 import re
-import calendar
-import datetime
 
 
 class LDAPAuthenticationForm(AuthenticationForm):
@@ -310,3 +308,25 @@ class AsignacionRapidaForm(forms.Form):
                     "El nombre de usuario contiene caracteres no válidos."
                 )
         return username
+
+
+class IncidenciaForm(forms.ModelForm):
+    class Meta:
+        model = Incidencia
+        fields = ['estado']
+        widgets = {
+            'estado': forms.Select(attrs={
+                'class': 'form-control',
+                'onchange': 'this.form.submit()'
+            }),
+        }
+
+class FiltroFechaForm(forms.Form):
+    fecha_inicio = forms.DateField(
+        label='Fecha inicio',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    fecha_fin = forms.DateField(
+        label='Fecha fin',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )

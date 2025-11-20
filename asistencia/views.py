@@ -1,25 +1,18 @@
 # views.py
-from django.db.models import Q, Count
-from django.core.paginator import Paginator
 from django.contrib.auth import login, logout, authenticate
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
-from django.db import transaction
 from datetime import datetime, date, timedelta
 from .models import ResponsableArea, Area, Incidencia
 from dateutil.relativedelta import relativedelta
 from .forms import (LDAPAuthenticationForm, ResponsableAreaForm, BuscarCrearUsuarioForm,
-                    AsignacionRapidaForm, UserCreationFlexibleForm, IncidenciaTrabajadoresExistentesForm,
-                    IncidenciaRangoDiasForm, IncidenciaForm, IncidenciaMasivaForm, IncidenciaImportarForm,
-                    FiltroIncidenciasForm, IncidenciaEdicionMasivaForm
+                    AsignacionRapidaForm, UserCreationFlexibleForm, IncidenciaForm, FiltroFechaForm
                     )
-import calendar
 import json
-import csv
-import io
 from .trabajadores import obtener_usuarios_ldap3
 
 
@@ -389,4 +382,126 @@ def gestion_usuario_completa(request, usuario_id=None):
     }
     return render(request, 'responsable_area/gestion_usuario_completa.html', context)
 
+
 # _____________________________________________________________________________________________________________________
+@login_required
+def tabla_incidencias(request):
+    # Verificar si el usuario es responsable de algún área
+    areas_responsable = ResponsableArea.get_areas_responsable_usuario(request.user)
+
+    if not areas_responsable and not request.user.is_superuser:
+        return render(request, 'error.html', {
+            'mensaje': 'No tienes permisos para ver esta página'
+        })
+
+    # Formulario de filtro de fechas
+    form_filtro = FiltroFechaForm(request.GET or None)
+
+    # Determinar rango de fechas
+    hoy = timezone.now().date()
+    if form_filtro.is_valid() and form_filtro.cleaned_data.get('fecha_inicio') and form_filtro.cleaned_data.get(
+            'fecha_fin'):
+        fecha_inicio = form_filtro.cleaned_data['fecha_inicio']
+        fecha_fin = form_filtro.cleaned_data['fecha_fin']
+    else:
+        # Por defecto: desde el 20 del mes anterior hasta hoy
+        primer_dia_mes_actual = hoy.replace(day=1)
+        ultimo_dia_mes_anterior = primer_dia_mes_actual - timedelta(days=1)
+        fecha_inicio = ultimo_dia_mes_anterior.replace(day=20)
+        fecha_fin = hoy
+
+    # Generar lista de días en el rango
+    dias = []
+    current_date = fecha_inicio
+    while current_date <= fecha_fin:
+        dias.append(current_date)
+        current_date += timedelta(days=1)
+
+    # Obtener incidencias según permisos
+    if request.user.is_superuser:
+        incidencias_qs = Incidencia.objects.filter(
+            fecha_asistencia__range=[fecha_inicio, fecha_fin]
+        )
+    else:
+        areas_ids = [ra.area.id for ra in areas_responsable]
+        incidencias_qs = Incidencia.objects.filter(
+            area_id__in=areas_ids,
+            fecha_asistencia__range=[fecha_inicio, fecha_fin]
+        )
+
+    # Agrupar por empleado
+    empleados_data = {}
+    for incidencia in incidencias_qs.select_related('area'):
+        empleado_key = f"{incidencia.uid}_{incidencia.empleado}"
+        if empleado_key not in empleados_data:
+            empleados_data[empleado_key] = {
+                'uid': incidencia.uid,
+                'empleado': incidencia.empleado,
+                'area': incidencia.area.nombre,
+                'incidencias': {}
+            }
+        empleados_data[empleado_key]['incidencias'][incidencia.fecha_asistencia] = {
+            'id': incidencia.id,
+            'estado': incidencia.estado
+        }
+
+    # Preparar datos para la tabla
+    tabla_datos = []
+    for empleado_key, datos in empleados_data.items():
+        fila = {
+            'empleado': datos['empleado'],
+            'area': datos['area'],
+            'uid': datos['uid'],
+            'dias': []
+        }
+
+        for dia in dias:
+            incidencia_dia = datos['incidencias'].get(dia)
+            if incidencia_dia:
+                fila['dias'].append({
+                    'fecha': dia,
+                    'incidencia_id': incidencia_dia['id'],
+                    'estado': incidencia_dia['estado'],
+                    'tiene_incidencia': True
+                })
+            else:
+                fila['dias'].append({
+                    'fecha': dia,
+                    'incidencia_id': None,
+                    'estado': 'No registrado',
+                    'tiene_incidencia': False
+                })
+
+        tabla_datos.append(fila)
+    context = {
+        'tabla_datos': tabla_datos,
+        'dias': dias,
+        'form_filtro': form_filtro,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'es_responsable': areas_responsable.exists() or request.user.is_superuser,
+        'opciones_estado': Incidencia.CHOICES.items()
+    }
+
+    return render(request, 'incidencias/tabla_incidencias.html', context)
+
+
+@login_required
+def editar_incidencia(request, incidencia_id):
+    incidencia = get_object_or_404(Incidencia, id=incidencia_id)
+
+    # Verificar permisos
+    if not request.user.is_superuser:
+        es_responsable = ResponsableArea.es_responsable_area(request.user, incidencia.area)
+        if not es_responsable:
+            return render(request, 'error.html', {
+                'mensaje': 'No tienes permisos para editar esta incidencia'
+            })
+
+    if request.method == 'POST':
+        form = IncidenciaForm(request.POST, instance=incidencia)
+        if form.is_valid():
+            form.save()
+            return redirect('tabla_incidencias')
+
+    return redirect('tabla_incidencias')

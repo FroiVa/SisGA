@@ -7,6 +7,9 @@ urlpatterns = [
     path('accounts/login/', views.login_view, name='login'),
     path('accounts/logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    # Incidencias
+    path('', views.tabla_incidencias, name='tabla_incidencias'),
+    path('editar/<int:incidencia_id>/', views.editar_incidencia, name='editar_incidencia'),
 
     # URLs existentes...
     path('responsables/crear/', views.responsable_area_create, name='responsable_area_create'),
