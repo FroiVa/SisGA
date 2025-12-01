@@ -98,7 +98,7 @@ def dashboard_view(request):
                     'empleado': empleado,
                 }
             )
-            incidencia.area = area
+
     return render(request, 'dashboard.html', {
         'user': request.user,
         'areas': areas,
@@ -428,6 +428,25 @@ def tabla_incidencias(request):
             area_id__in=areas_ids,
             fecha_asistencia__range=[fecha_inicio, fecha_fin]
         )
+
+    trabajadores_list = []
+    for ar in areas_responsable:
+        trabajadores = obtener_usuarios_ldap3(ar.area.cod_area)
+        trabajadores_list.extend(trabajadores)
+
+    for trabajador in trabajadores_list:
+        area = Area.objects.get(nombre=trabajador['area'])
+        uid = trabajador['uid']
+        empleado = trabajador['cn'] + " " + trabajador['sn']
+        for dia in dias:
+            incidencia, created = Incidencia.objects.get_or_create(
+                uid=uid,
+                fecha_asistencia=dia,
+                defaults={
+                    'area': area,
+                    'empleado': empleado,
+                }
+            )
 
     # Agrupar por empleado
     empleados_data = {}

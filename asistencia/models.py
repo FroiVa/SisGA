@@ -84,3 +84,4 @@ class Incidencia(models.Model):
         verbose_name_plural = 'Incidencias'
         db_table = 'incidencia'
         unique_together = ['uid', 'fecha_asistencia']
+        ordering = ['empleado',]
