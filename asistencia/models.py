@@ -76,7 +76,7 @@ class Incidencia(models.Model):
     area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
     uid = models.CharField(max_length=100, help_text='Usuario LDAP', db_column='UID', default=None)
     empleado = models.CharField(max_length=100, help_text='FK a EmpleadosGral', db_column='Empleado')
-    estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado', null=True, blank=True)
+    estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado', default=CHOICES['Asistió puntual'], null=True, blank=True)
     fecha_asistencia = models.DateField(db_column='Fecha_Asistencia', default=datetime.date.today)
 
     class Meta:

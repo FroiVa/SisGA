@@ -59,13 +59,13 @@
                             </div>
                         </div>
 
-{#                        {% if areas %}#}
-{#                            <h1>Areas1</h1>#}
-{#                            {% for trabajador in trabajadores_list %}#}
-{#                                <h4>{{ trabajador.area }}</h4>#}
-{#                                <p>{{ trabajador.cn }}{{ trabajador.sn }}</p>#}
-{#                            {% endfor %}#}
-{#                        {% endif %}#}
+                        {% if areas %}
+                            <h1>Areas1</h1>
+                            {% for trabajador in trabajadores_list %}
+                                <h4>{{ trabajador.area }}</h4>
+                                <p>{{ trabajador.cn }}{{ trabajador.sn }}</p>
+                            {% endfor %}
+                        {% endif %}
                         {% if periodo %}
                             <h1>Periodo</h1>
                             {% for dia in periodo %}

@@ -19,8 +19,10 @@ except Exception as e:
 # Probar conexión a SQL Server
 try:
     with connections['sqlserver'].cursor() as cursor:
-        cursor.execute("SELECT @@VERSION;")
-        version = cursor.fetchone()
-        print(f"✅ SQL Server conectado: {version[0][:50]}...")
+        cursor.execute("SELECT * FROM Empleados_Gral;")
+        empleados = cursor.fetchall()
+        for empleado in empleados[:10]:
+            print(empleado)
+
 except Exception as e:
     print(f"❌ Error SQL Server: {e}")

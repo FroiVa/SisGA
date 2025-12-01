@@ -76,28 +76,31 @@ WSGI_APPLICATION = 'AsistenciaProject.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {# PostgreSQL - base de datos principal
+    'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'asistencia',
         'USER': 'postgres',
         'PASSWORD': 'postgres',
-        'HOST': 'localhost',
+        'HOST': '127.0.0.1',
         'PORT': '5432',
+        'OPTIONS': {
+            'client_encoding': 'UTF8',
+        }
     },
-    # 'sqlserver': {  # SQL Server - base de datos existente
-    #     'ENGINE': 'mssql',
-    #     'NAME': 'NOMINA',
-    #     'USER': 'ldap-export',
-    #     'PASSWORD': 'ldap-export',
-    #     'HOST': '10.6.240.132',
-    #     'PORT': '1433',
-    #     'OPTIONS': {
-    #         'driver': 'ODBC Driver 17 for SQL Server',
-    #     },
-    # }
+    'sqlserver': {  # SQL Server - base de datos existente
+        'ENGINE': 'mssql',
+        'NAME': 'NOMINA',
+        'USER': 'ldap-export',
+        'PASSWORD': 'ldap-export',
+        'HOST': '10.6.240.132',
+        'PORT': '1433',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+        },
+    }
 }
 
-DATABASE_ROUTERS = ['asistencia.routers.DatabaseRouter']
+# DATABASE_ROUTERS = ['asistencia.routers.DatabaseRouter']
 
 
 

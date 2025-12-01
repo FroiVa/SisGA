@@ -49,7 +49,8 @@
                         <td>{{ fila.empleado }}</td>
                         <td>{{ fila.area }}</td>
                         {% for dia in fila.dias %}
-                            <td class="text-center estado-cell {% if not dia.tiene_incidencia %}no-registrado{% endif %}">
+                            <td class="text-center estado-cell
+                                {% if not dia.tiene_incidencia %}no-registrado{% endif %}">
                                 {% if dia.tiene_incidencia %}
                                     {{ dia.estado }}
                                 {% else %}
