@@ -1,140 +1,349 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Incidencias{% endblock %}
+
+{% block extra_head %}
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="{% static 'styles/datatables/dataTables.bootstrap5.min.css' %}">
+<link rel="stylesheet" href="{% static 'styles/datatables/buttons.bootstrap5.min.css' %}">
+<link rel="stylesheet" href="{% static 'styles/datatables/fixedHeader.bootstrap5.min.css' %}">
+<style>
+    /* Estilos personalizados para DataTables */
+    .dataTables_wrapper .dataTables_length select {
+        width: auto;
+        display: inline-block;
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        width: auto;
+        display: inline-block;
+    }
+
+    /* Asegurar que la tabla sea responsive */
+    .table-container {
+        overflow-x: auto;
+    }
+
+    /* Fijar la primera columna (empleado) */
+    th:first-child, td:first-child {
+        position: sticky;
+        left: 0;
+        background-color: #fff;
+        z-index: 10;
+    }
+
+    /* Mejorar la apariencia de los selects en celdas */
+    .form-select {
+        min-width: 120px;
+        margin: 0 auto;
+        display: block;
+    }
+
+    /* Colores para diferentes estados */
+    .estado-P { background-color: #cce5ff; } /* Presente */
+    .estado-F { background-color: #ffcccc; } /* Falta */
+    .estado-V { background-color: #e6ccff; } /* Vacaciones */
+    .estado-I { background-color: #ffe6cc; } /* Incapacidad */
+    .estado-PM { background-color: #ccffcc; } /* Permiso */
+
+    /* Responsive breakpoints */
+    @media (max-width: 768px) {
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            float: none;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .dataTables_wrapper .dataTables_paginate {
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">Control de Incidencias</h2>
-        </div>
-        <div class="card-body">
-            <!-- Filtros -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-5">
-                            {{ form_filtro.fecha_inicio.label_tag }}
-                            {{ form_filtro.fecha_inicio }}
-                        </div>
-                        <div class="col-md-5">
-                            {{ form_filtro.fecha_fin.label_tag }}
-                            {{ form_filtro.fecha_fin }}
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary">Filtrar</button>
-                        </div>
-                    </form>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <!-- Header con estadísticas -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>
+                        <i class="bi bi-clipboard-check"></i>
+                        Gestión de Incidencias
+                    </h1>
                 </div>
-                <div class="col-md-6 text-end">
-                    <p class="text-muted">
-                        Mostrando del {{ fecha_inicio|date:"d/m/Y" }} al {{ fecha_fin|date:"d/m/Y" }}
-                    </p>
-                </div>
-            </div>
 
-            <!-- Tabla -->
-            <div class="table-container">
-                <table class="table table-bordered table-striped">
-                    <thead class="table-dark">
-                    <tr>
-                        <th>Empleado</th>
-                        <th>Área</th>
-                        {% for dia in dias %}
-                            <th class="text-center">{{ dia|date:"d/m" }}</th>
-                        {% endfor %}
-{#                        <th>Acciones</th>#}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for fila in tabla_datos %}
-                        <tr>
-                            <td>{{ fila.empleado }}</td>
-                            <td>{{ fila.area }}</td>
-                            {% for dia in fila.dias %}
-                                <td>
-                                    <form method="post" action="{% url 'editar_incidencia' dia.incidencia_id %}">
-                                        {% csrf_token %}
-                                        <select name="estado" class="form-select" onchange="this.form.submit()">
-                                            {% for key, value in opciones_estado %}
-                                                <option value="{{ key }}" {% if dia.estado == key %}selected{% endif %}>
-                                                    {{ value }}
-                                                </option>
-                                            {% endfor %}
-                                        </select>
-                                    </form>
-{#                                    {% if dia.tiene_incidencia %}#}
-{#                                        {{ dia.estado }}#}
-{#                                    {% else %}#}
-{#                                        {{ dia.estado }}#}
-{#                                    {% endif %}#}
-                                </td>
-                            {% endfor %}
-{#                            <td>#}
-{#                                <button type="button" class="btn btn-sm btn-warning"#}
-{#                                        data-bs-toggle="modal"#}
-{#                                        data-bs-target="#modalEditar{{ forloop.counter }}">#}
-{#                                    Editar#}
-{#                                </button>#}
-{#                            </td>#}
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            {% if not tabla_datos %}
-                <div class="alert alert-info text-center">
-                    No hay incidencias registradas en el período seleccionado.
-                </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Modales para editar -->
-    {% for fila in tabla_datos %}
-        <div class="modal fade" id="modalEditar{{ forloop.counter }}" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Editar Incidencias - {{ fila.empleado }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <!-- Tarjetas de estadísticas -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="card-title">Total</h5>
+                                        <h2 class="card-text">{{ total_incidencias }}</h2>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="bi bi-clipboard-data fs-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="modal-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="card-title">Hoy</h5>
+                                        <h2 class="card-text">{{ incidencias_hoy }}</h2>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="bi bi-calendar-day fs-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="card-title">Acciones</h5>
+                                        <p class="card-text mb-0">Edición Masiva</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="bi bi-pencil-square fs-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="card-title">Exportar</h5>
+                                        <p class="card-text mb-0">Descargar CSV</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="bi bi-download fs-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            Filtros de Búsqueda
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <form method="get" class="row g-3" id="form-filtro">
+                                    <div class="col-md-5">
+                                        {{ form_filtro.fecha_inicio.label_tag }}
+                                        {{ form_filtro.fecha_inicio }}
+                                    </div>
+                                    <div class="col-md-5">
+                                        {{ form_filtro.fecha_fin.label_tag }}
+                                        {{ form_filtro.fecha_fin }}
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-primary">Filtrar</button>
+                                        <button type="button" id="limpiar-filtros" class="btn btn-secondary">
+                                            <i class="bi bi-arrow-clockwise"></i> Limpiar
+                                        </button>
+                                        <button type="button" id="exportar-csv" class="btn btn-outline-success">
+                                            <i class="bi bi-download"></i> Exportar CSV
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <p class="text-muted">
+                                    Mostrando del {{ fecha_inicio|date:"d/m/Y" }} al {{ fecha_fin|date:"d/m/Y" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla con DataTables -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Incidencias</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="tablaIncidencias" class="table table-striped table-bordered" style="width:100%">
                                 <thead>
                                 <tr>
-                                    <th>Fecha</th>
-                                    <th>Estado</th>
+                                    <th>Empleado</th>
+                                    <th>Área</th>
+                                    {% for dia in dias %}
+                                        <th class="text-center">{{ dia|date:"d/m" }}<br><small>{{ dia|date:"D" }}</small></th>
+                                    {% endfor %}
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {% for dia in fila.dias %}
-                                    {% if dia.tiene_incidencia %}
-                                        <tr>
-                                            <td>{{ dia.fecha|date:"d/m/Y" }}</td>
-                                            <td>
+                                {% for fila in tabla_datos %}
+                                    <tr>
+                                        <td>{{ fila.empleado }}</td>
+                                        <td>{{ fila.area }}</td>
+                                        {% for dia in fila.dias %}
+                                            <td class="text-center estado-{{ dia.estado }}">
                                                 <form method="post"
-                                                      action="{% url 'editar_incidencia' dia.incidencia_id %}">
+                                                      action="{% url 'editar_incidencia' dia.incidencia_id %}"
+                                                      class="d-inline">
                                                     {% csrf_token %}
-                                                    <select name="estado" class="form-select"
+                                                    <select name="estado" class="form-select form-select-sm estado-select"
                                                             onchange="this.form.submit()">
                                                         {% for key, value in opciones_estado %}
                                                             <option value="{{ key }}"
                                                                     {% if dia.estado == key %}selected{% endif %}>
-                                                                {{ value }}
+                                                                {{ value|slice:":3" }}
                                                             </option>
                                                         {% endfor %}
                                                     </select>
                                                 </form>
                                             </td>
-                                        </tr>
-                                    {% endif %}
+                                        {% endfor %}
+                                    </tr>
                                 {% endfor %}
                                 </tbody>
                             </table>
                         </div>
+
+                        {% if not tabla_datos %}
+                            <div class="alert alert-info text-center">
+                                No hay incidencias registradas en el período seleccionado.
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-    {% endfor %}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables JavaScript -->
+<script src="{% static 'js/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'js/datatables/dataTables.bootstrap5.min.js' %}"></script>
+{#<script src="{% static 'js/datatables/dataTables.buttons.min.js' %}"></script>#}
+{#<script src="{% static 'js/datatables/buttons.bootstrap5.min.js' %}"></script>#}
+{#<script src="{% static 'js/datatables/buttons.html5.min.js' %}"></script>#}
+{#<script src="{% static 'js/datatables/buttons.print.min.js' %}"></script>#}
+{#<script src="{% static 'js/datatables/dataTables.fixedHeader.min.js' %}"></script>#}
+
+<script>
+    $(document).ready(function() {
+        // Inicializar DataTable
+        var table = $('#tablaIncidencias').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                {
+                    extend: 'copy',
+                    text: '<i class="bi bi-files"></i> Copiar',
+                    className: 'btn btn-secondary'
+                },
+                {
+                    extend: 'excel',
+                    text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+                    className: 'btn btn-success'
+                },
+                {
+                    extend: 'pdf',
+                    text: '<i class="bi bi-file-earmark-pdf"></i> PDF',
+                    className: 'btn btn-danger'
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="bi bi-printer"></i> Imprimir',
+                    className: 'btn btn-info'
+                }
+            ],
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
+            responsive: true,
+            scrollX: true,
+            scrollCollapse: true,
+            fixedHeader: true,
+            order: [[0, 'asc']],
+            columnDefs: [
+                {
+                    target: 0, // Columna Empleado
+                    width: '200px'
+                },
+                {
+                    target: 1, // Columna Área
+                    width: '150px'
+                },
+                {
+                    target: '_all', // Todas las columnas de días
+                    className: 'text-center',
+                    width: '100px'
+                }
+            ],
+            initComplete: function() {
+                // Añadir filtro por área
+                this.api().columns(1).every(function() {
+                    var column = this;
+                    var select = $('<select class="form-select form-select-sm"><option value="">Todas las áreas</option></select>')
+                        .appendTo($(column.header()))
+                        .on('change', function() {
+                            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                            column.search(val ? '^' + val + '$' : '', true, false).draw();
+                        });
+
+                    column.data().unique().sort().each(function(d, j) {
+                        select.append('<option value="' + d + '">' + d + '</option>');
+                    });
+                });
+            }
+        });
+
+        // Botón para limpiar filtros
+        $('#limpiar-filtros').on('click', function() {
+            $('#form-filtro')[0].reset();
+            window.location.href = window.location.pathname;
+        });
+
+        // Botón para exportar CSV (si necesitas funcionalidad adicional)
+        $('#exportar-csv').on('click', function() {
+            table.button('.buttons-excel').trigger();
+        });
+
+        // Mejorar la visibilidad de los selects en DataTable
+        $(document).on('mouseenter', '.estado-select', function() {
+            $(this).addClass('border-primary');
+        }).on('mouseleave', '.estado-select', function() {
+            $(this).removeClass('border-primary');
+        });
+
+        // Actualizar colores al cambiar selección
+        $(document).on('change', '.estado-select', function() {
+            var cell = $(this).closest('td');
+            var estado = $(this).val();
+
+            // Remover todas las clases de estado
+            cell.removeClass(function(index, className) {
+                return (className.match(/\bestado-\S+/g) || []).join(' ');
+            });
+
+            // Añadir nueva clase de estado
+            cell.addClass('estado-' + estado);
+        });
+    });
+</script>
 {% endblock %}

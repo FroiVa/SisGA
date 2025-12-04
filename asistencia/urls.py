@@ -12,6 +12,7 @@ urlpatterns = [
     path('editar/<int:incidencia_id>/', views.editar_incidencia, name='editar_incidencia'),
 
     # URLs existentes...
+    path('responsables/listar', views.responsables_listar, name='responsables_listar'),
     path('responsables/crear/', views.responsable_area_create, name='responsable_area_create'),
     path('responsables/buscar-crear-usuario/', views.buscar_crear_usuario, name='buscar_crear_usuario'),
     path('responsables/asignacion-rapida/', views.asignacion_rapida, name='asignacion_rapida'),

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div style="height: 40px"></div>
+    <div class="container">
+        <table class="table table-bordered">
+            <tr>
+                <th>Responsable</th>
+                <th>Area</th>
+                <th>Fecha asignación</th>
+                <th>Activo</th>
+            </tr>
+            <tbody>
+
+            {% for ra in responsables %}
+                <tr>
+                    <td>{{ ra.usuario.first_name }} {{ ra.usuario.first_name }}</td>
+                    <td>{{ ra.area.nombre }}</td>
+                    <td>{{ ra.fecha_asignacion }}</td>
+                    <td>{{ ra.activo }}</td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+    </div>
+
+
+
+{% endblock %}

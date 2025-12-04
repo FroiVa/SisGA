@@ -66,44 +66,11 @@ def dashboard_view(request):
     """
     usuario = request.user
     areas = ResponsableArea.objects.filter(usuario=usuario, activo=True).select_related('area').order_by('area__nombre')
-    periodo = []
-    hoy = date.today()
 
-    # Calcular fecha de inicio usando relativedelta
-    fecha_inicio = hoy.replace(day=20)- relativedelta(months=1)
-    periodo.append(fecha_inicio)
-    # Iterar por cada día
-    fecha_actual = fecha_inicio
-    while fecha_actual < hoy:
-        print(fecha_actual.strftime('%Y-%m-%d'))
-        fecha_actual += relativedelta(days=1)
-        periodo.append(fecha_actual)
-
-
-    trabajadores_list = []
-    for area in areas:
-        trabajadores = obtener_usuarios_ldap3(area.area.cod_area)
-        trabajadores_list.extend(trabajadores)
-
-    for trabajador in trabajadores_list:
-        area = Area.objects.get(nombre=trabajador['area'])
-        uid = trabajador['uid']
-        empleado = trabajador['cn'] + " " + trabajador['sn']
-        for dia in periodo:
-            incidencia, created = Incidencia.objects.get_or_create(
-                uid=uid,
-                fecha_asistencia=dia,
-                defaults={
-                    'area': area,
-                    'empleado': empleado,
-                }
-            )
 
     return render(request, 'dashboard.html', {
         'user': request.user,
         'areas': areas,
-        'periodo': periodo,
-        'trabajadores_list': trabajadores_list,
         'areas_responsable': request.user.areas_responsable.all() if hasattr(request.user, 'areas_responsable') else []
     })
 
@@ -384,6 +351,15 @@ def gestion_usuario_completa(request, usuario_id=None):
 
 
 # _____________________________________________________________________________________________________________________
+@login_required
+def responsables_listar(request):
+    responsables = ResponsableArea.objects.all().order_by('usuario__first_name')
+    context = {
+        'responsables': responsables,
+    }
+    return render(request, 'responsable_area/responsables_area.html', context)
+
+
 @login_required
 def tabla_incidencias(request):
     # Verificar si el usuario es responsable de algún área
