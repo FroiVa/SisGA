@@ -14,7 +14,7 @@ class Area(models.Model):
     cod_area = models.CharField(max_length=20)
     nombre = models.CharField(max_length=100)
     unidad_padre = models.CharField(max_length=20)
-    assets = models.IntegerField()
+    assets = models.IntegerField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Área'
@@ -85,3 +85,18 @@ class Incidencia(models.Model):
         db_table = 'incidencia'
         unique_together = ['uid', 'fecha_asistencia']
         ordering = ['empleado',]
+
+
+# class Trabajador(models):
+#     ci = models.CharField(max_length=11, db_column='CI')
+#     nombre = models.CharField(max_length=100, db_column='Nombre')
+#     apellidos = models.CharField(max_length=150, db_column='Apellidos')
+#     es_baja = models.CharField(max_length=20, db_column='Baja')
+#
+#     area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
+#
+#     class Meta:
+#         verbose_name = 'Trabajador'
+#         verbose_name_plural = 'Trabajadores'
+#         db_table = 'trabajador'
+#         ordering = ['nombre',]

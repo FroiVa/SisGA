@@ -1,5 +1,6 @@
 import django
 from django.conf import settings
+from .models import Area
 import os
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AsistenciaProject.settings')
@@ -19,7 +20,7 @@ except Exception as e:
 # Probar conexión a SQL Server
 try:
     with connections['sqlserver'].cursor() as cursor:
-        cursor.execute("SELECT * FROM Empleados_Gral;")
+        cursor.execute("SELECT * FROM RH_Unidades_Organizativas;")
         empleados = cursor.fetchall()
         for empleado in empleados[:10]:
             print(empleado)
