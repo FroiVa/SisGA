@@ -407,7 +407,7 @@ def tabla_incidencias(request):
 
     trabajadores_list = []
     for ar in areas_responsable:
-        trabajadores = obtener_usuarios_ldap3(ar.area.unidad_padre)
+        trabajadores = obtener_usuarios_ldap3(ar.area.cod_area)
         trabajadores_list.extend(trabajadores)
 
     for trabajador in trabajadores_list:
@@ -469,6 +469,8 @@ def tabla_incidencias(request):
 
         tabla_datos.append(fila)
     context = {
+        'areas_responsable': areas_responsable,
+        'trabajadores_list': trabajadores_list,
         'tabla_datos': tabla_datos,
         'dias': dias,
         'form_filtro': form_filtro,

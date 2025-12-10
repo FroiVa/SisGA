@@ -29,7 +29,7 @@ def obtener_usuarios_ldap3(codigo_area):
 
         conn.search(base_dn, filtro, attributes=atributos)
 
-        usuarios = []
+        trabajadores = []
         for entry in conn.entries:
             usuario = {
                 'uid': str(entry.uid) if entry.uid else '',
@@ -43,9 +43,9 @@ def obtener_usuarios_ldap3(codigo_area):
                 'assets': str(entry.Assets) if entry.Assets else '',
                 'baja': str(entry.EsBaja) if entry.EsBaja else '',
             }
-            usuarios.append(usuario)
+            trabajadores.append(usuario)
 
-        return usuarios
+        return trabajadores
 
     except Exception as e:
         print(f"Error: {e}")
@@ -53,7 +53,7 @@ def obtener_usuarios_ldap3(codigo_area):
 
 
 if __name__ == "__main__":
-    users = obtener_usuarios_ldap3('A3000-1')
+    users = obtener_usuarios_ldap3('A3000')
     for user in users:
         # print(user['area'])
         # print(user['cn'] + " " +user['sn'])

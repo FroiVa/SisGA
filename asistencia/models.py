@@ -87,16 +87,16 @@ class Incidencia(models.Model):
         ordering = ['empleado',]
 
 
-# class Trabajador(models):
-#     ci = models.CharField(max_length=11, db_column='CI')
-#     nombre = models.CharField(max_length=100, db_column='Nombre')
-#     apellidos = models.CharField(max_length=150, db_column='Apellidos')
-#     es_baja = models.CharField(max_length=20, db_column='Baja')
-#
-#     area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
-#
-#     class Meta:
-#         verbose_name = 'Trabajador'
-#         verbose_name_plural = 'Trabajadores'
-#         db_table = 'trabajador'
-#         ordering = ['nombre',]
+class Trabajador(models.Model):
+    ci = models.CharField(max_length=11, db_column='CI')
+    nombre = models.CharField(max_length=100, db_column='Nombre')
+    apellidos = models.CharField(max_length=150, db_column='Apellidos')
+    es_baja = models.BooleanField(db_column='Baja')
+
+    area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
+
+    class Meta:
+        verbose_name = 'Trabajador'
+        verbose_name_plural = 'Trabajadores'
+        db_table = 'trabajador'
+        ordering = ['nombre',]

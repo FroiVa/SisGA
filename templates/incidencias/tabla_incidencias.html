@@ -188,7 +188,14 @@
             </div>
         </div>
     </div>
-
+    <h3>Trabajadores</h3>
+    {% for t in trabajadores_list %}
+        {{ t.uid }}
+    {% endfor %}
+    <h3>Areas</h3>
+    {% for ar in areas_responsable %}
+        {{ ar.area.cod_area }} {{ ar.area.nombre }}
+    {% endfor %}
 {% endblock %}
 
 {% block extra_js %}
@@ -197,6 +204,7 @@
 <script type="text/javascript" charset="utf8" src="{% static 'js/datatables/dataTables.js' %}"></script>
 
 <script>
+
 $(document).ready(function() {
     // Configuración básica de DataTable
     $('#incidenciasTable').DataTable({
