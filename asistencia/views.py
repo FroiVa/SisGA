@@ -363,7 +363,7 @@ def responsables_listar(request):
 @login_required
 def tabla_incidencias(request):
     # Verificar si el usuario es responsable de algún área
-    areas_responsable = ResponsableArea.get_areas_responsable_usuario(request.user)
+    areas_responsable = ResponsableArea.objects.filter(usuario=request.user)
 
     if not areas_responsable and not request.user.is_superuser:
         return render(request, 'error.html', {
@@ -407,7 +407,7 @@ def tabla_incidencias(request):
 
     trabajadores_list = []
     for ar in areas_responsable:
-        trabajadores = obtener_usuarios_ldap3(ar.area.cod_area)
+        trabajadores = obtener_usuarios_ldap3(ar.area.unidad_padre)
         trabajadores_list.extend(trabajadores)
 
     for trabajador in trabajadores_list:

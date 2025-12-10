@@ -14,12 +14,12 @@ class Area(models.Model):
     cod_area = models.CharField(max_length=20)
     nombre = models.CharField(max_length=100)
     unidad_padre = models.CharField(max_length=20)
-    assets = models.IntegerField(null=True, blank=True)
+    # assets = models.IntegerField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Área'
         verbose_name_plural = 'Áreas'
-        ordering = ['assets', 'cod_area', 'nombre']
+        ordering = ['cod_area', 'nombre']
         db_table = 'area'
 
     def __str__(self):
@@ -37,7 +37,7 @@ class ResponsableArea(models.Model):
         verbose_name = 'Responsable de Área'
         verbose_name_plural = 'Responsables de Áreas'
         unique_together = ['usuario', 'area']
-        ordering = ['area__nombre', 'usuario__username']
+        ordering = ['area__cod_area', 'usuario__username']
         db_table = 'responsable_area'
 
     def __str__(self):
