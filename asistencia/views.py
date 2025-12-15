@@ -361,9 +361,9 @@ def responsables_listar(request):
 
 
 @login_required
-def tabla_incidencias(request):
+def tabla_incidencias(request, id=None):
     # Verificar si el usuario es responsable de algún área
-    areas_responsable = ResponsableArea.objects.filter(usuario=request.user)
+    areas_responsable = ResponsableArea.objects.get(area=(Area.objects.get(id=id)))
 
     if not areas_responsable and not request.user.is_superuser:
         return render(request, 'error.html', {
