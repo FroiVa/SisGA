@@ -59,6 +59,23 @@ class ResponsableArea(models.Model):
         return cls.objects.filter(usuario=usuario, area=area, activo=True).exists()
 
 
+class Trabajador(models.Model):
+    ci = models.CharField(max_length=11, db_column='CI')
+    nombre = models.CharField(max_length=100, db_column='Nombre')
+    apellidos = models.CharField(max_length=150, db_column='Apellidos')
+    es_baja = models.BooleanField(db_column='Baja')
+
+    area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
+
+    class Meta:
+        verbose_name = 'Trabajador'
+        verbose_name_plural = 'Trabajadores'
+        db_table = 'trabajador'
+        ordering = ['nombre',]
+
+    def __str__(self):
+        return f"{self.nombre}"
+
 
 class Incidencia(models.Model):
     CHOICES = {
@@ -74,8 +91,7 @@ class Incidencia(models.Model):
         'Licencia especial': 'Licencia especial',
     }
     area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
-    uid = models.CharField(max_length=100, help_text='Usuario LDAP', db_column='UID', default=None)
-    empleado = models.CharField(max_length=100, help_text='FK a EmpleadosGral', db_column='Empleado')
+    trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE, db_column='Trabajador', default=None)
     estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado', default=CHOICES['Asistió puntual'], null=True, blank=True)
     fecha_asistencia = models.DateField(db_column='Fecha_Asistencia', default=datetime.date.today)
 
@@ -83,20 +99,8 @@ class Incidencia(models.Model):
         verbose_name = 'Incidencia'
         verbose_name_plural = 'Incidencias'
         db_table = 'incidencia'
-        unique_together = ['uid', 'fecha_asistencia']
-        ordering = ['empleado',]
+        unique_together = ['trabajador', 'fecha_asistencia']
+        ordering = ['trabajador',]
 
 
-class Trabajador(models.Model):
-    ci = models.CharField(max_length=11, db_column='CI')
-    nombre = models.CharField(max_length=100, db_column='Nombre')
-    apellidos = models.CharField(max_length=150, db_column='Apellidos')
-    es_baja = models.BooleanField(db_column='Baja')
 
-    area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
-
-    class Meta:
-        verbose_name = 'Trabajador'
-        verbose_name_plural = 'Trabajadores'
-        db_table = 'trabajador'
-        ordering = ['nombre',]

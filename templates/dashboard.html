@@ -30,7 +30,7 @@
                                     <ul class="list-group">
                                         {% for area in areas_responsable %}
                                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                {{ area.area.nombre }}
+                                                <a class="nav-link" href="{% url 'tabla_incidencias' area.area_id %}">{{ area.area.nombre }}</a>
                                                 <span class="badge bg-{% if area.activo %}success{% else %}secondary{% endif %}">
                                                 {% if area.activo %}Activo{% else %}Inactivo{% endif %}
                                             </span>

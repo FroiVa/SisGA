@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from datetime import datetime, date, timedelta
-from .models import ResponsableArea, Area, Incidencia
+from .models import ResponsableArea, Area, Incidencia, Trabajador
 from dateutil.relativedelta import relativedelta
 from .forms import (LDAPAuthenticationForm, ResponsableAreaForm, BuscarCrearUsuarioForm,
                     AsignacionRapidaForm, UserCreationFlexibleForm, IncidenciaForm, FiltroFechaForm
@@ -361,11 +361,11 @@ def responsables_listar(request):
 
 
 @login_required
-def tabla_incidencias(request, id):
+def tabla_incidencias(request, area_id):
     # Verificar si el usuario es responsable de algún área
-    areas_responsable = ResponsableArea.objects.get(area=(Area.objects.get(id=id)))
+    area_responsable = ResponsableArea.objects.get(area=(Area.objects.get(pk=area_id)))
 
-    if not areas_responsable and not request.user.is_superuser:
+    if not area_responsable and not request.user.is_superuser:
         return render(request, 'error.html', {
             'mensaje': 'No tienes permisos para ver esta página'
         })
@@ -399,28 +399,23 @@ def tabla_incidencias(request, id):
             fecha_asistencia__range=[fecha_inicio, fecha_fin]
         )
     else:
-        areas_ids = [ra.area.id for ra in areas_responsable]
+        areas_ids = [ra.area.id for ra in area_responsable]
         incidencias_qs = Incidencia.objects.filter(
             area_id__in=areas_ids,
             fecha_asistencia__range=[fecha_inicio, fecha_fin]
         )
 
-    trabajadores_list = []
-    for ar in areas_responsable:
-        trabajadores = obtener_usuarios_ldap3(ar.area.cod_area)
-        trabajadores_list.extend(trabajadores)
+    trabajadores = Trabajador.objects.filter(area=area_responsable.area)
+    trabajadores_list = list(trabajadores)
 
     for trabajador in trabajadores_list:
-        area = Area.objects.get(nombre=trabajador['area'])
-        uid = trabajador['uid']
-        empleado = trabajador['cn'] + " " + trabajador['sn']
+
         for dia in dias:
             incidencia, created = Incidencia.objects.get_or_create(
-                uid=uid,
                 fecha_asistencia=dia,
                 defaults={
-                    'area': area,
-                    'empleado': empleado,
+                    'area': trabajador.area,
+                    'trabajador': trabajador,
                 }
             )
 
@@ -469,14 +464,14 @@ def tabla_incidencias(request, id):
 
         tabla_datos.append(fila)
     context = {
-        'areas_responsable': areas_responsable,
+        'areas_responsable': area_responsable,
         'trabajadores_list': trabajadores_list,
         'tabla_datos': tabla_datos,
         'dias': dias,
         'form_filtro': form_filtro,
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
-        'es_responsable': areas_responsable.exists() or request.user.is_superuser,
+        'es_responsable': area_responsable.exists() or request.user.is_superuser,
         'opciones_estado': Incidencia.CHOICES.items()
     }
 
