@@ -361,7 +361,7 @@ def responsables_listar(request):
 
 
 @login_required
-def tabla_incidencias(request, id=None):
+def tabla_incidencias(request, id):
     # Verificar si el usuario es responsable de algún área
     areas_responsable = ResponsableArea.objects.get(area=(Area.objects.get(id=id)))
 
