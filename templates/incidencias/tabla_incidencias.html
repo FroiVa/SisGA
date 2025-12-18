@@ -144,9 +144,9 @@
                                 <tbody>
                                 {% for fila in tabla_datos %}
                                     <tr>
-                                        <td>
+                                        <td style="width: fit-content">
                                             <div class="row">
-                                                <p style="width: fit-content; font-size: medium" >
+                                                <p style="font-weight: bold" >
                                                     {{ fila.empleado }}
                                                 </p>
                                             </div>
@@ -156,17 +156,20 @@
                                         </td>
 
                                         {% for dia in fila.dias %}
+
                                             <td>
                                                 <form method="post"
                                                       action="{% url 'editar_incidencia' dia.incidencia_id %}">
                                                     {% csrf_token %}
                                                     <select name="estado" class="form-select" style="width: fit-content"
                                                             onchange="this.form.submit()">
-                                                        {% for key, value in opciones_estado %}
-                                                            <option value="{{ key }}"
-                                                                    {% if dia.estado == key %}selected{% endif %}>
-                                                                {{ value }}
+                                                        {% for opcion in opciones_estado %}
+                                                            <option value="{{ opcion.clave }}"
+                                                                    {% if dia.estado.clave == opcion.clave %}selected{% endif %}>
+                                                                {{ opcion.clave_id }}
+
                                                             </option>
+
                                                         {% endfor %}
                                                     </select>
                                                 </form>
@@ -189,13 +192,13 @@
         </div>
     </div>
     <h3>Trabajadores</h3>
-    {% for t in trabajadores_list %}
-        {{ t.uid }}
+    {% for t in trabajadores %}
+        <div>{{ t.nombre }} {{ t.apellidos }}</div>
     {% endfor %}
     <h3>Areas</h3>
-    {% for ar in areas_responsable %}
-        {{ ar.area.cod_area }} {{ ar.area.nombre }}
-    {% endfor %}
+
+    {{ area_responsable.area.cod_area }} {{ area_responsable.area.nombre }}
+
 {% endblock %}
 
 {% block extra_js %}

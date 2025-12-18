@@ -8,7 +8,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AsistenciaProject.settings')
 django.setup()
 
 from django.db import connections
-from asistencia.models import Area, Trabajador
+from asistencia.models import Area, Trabajador, Estado
 from django.conf import settings
 
 # Probar conexión a PostgreSQL
@@ -81,5 +81,21 @@ def get_trabajadores():
             resultados['actualizados'] += 1
             print(f"🔄 ACTUALIZADO: {area.cod_area} (Nombre: {area.nombre})")
 
+def get_estados():
+    estados = coneccion("SELECT Desc_Clave, Id_Clave FROM RH_Claves_Ausencias;")
+
+    for estado in estados:
+        estado, creado = Estado.objects.update_or_create(
+            clave=estado[0],
+            clave_id=estado[1],
+        )
+        if creado:
+            resultados['creados'] += 1
+            print(f"✅ CREADO: {estado.clave} (Clave_Id: {estado.clave_id})")
+        else:
+            resultados['actualizados'] += 1
+            print(f"🔄 ACTUALIZADO: {estado.clave} (Clave_Id: {estado.clave_id})")
+
+
 if __name__ == '__main__':
-    get_trabajadores()
+    get_estados()

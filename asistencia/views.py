@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from datetime import datetime, date, timedelta
-from .models import ResponsableArea, Area, Incidencia, Trabajador
+from .models import ResponsableArea, Area, Incidencia, Trabajador, Estado
 from dateutil.relativedelta import relativedelta
 from .forms import (LDAPAuthenticationForm, ResponsableAreaForm, BuscarCrearUsuarioForm,
                     AsignacionRapidaForm, UserCreationFlexibleForm, IncidenciaForm, FiltroFechaForm
@@ -399,34 +399,41 @@ def tabla_incidencias(request, area_id):
             fecha_asistencia__range=[fecha_inicio, fecha_fin]
         )
     else:
-        areas_ids = [ra.area.id for ra in area_responsable]
+
         incidencias_qs = Incidencia.objects.filter(
-            area_id__in=areas_ids,
+            area=area_responsable.area,
             fecha_asistencia__range=[fecha_inicio, fecha_fin]
         )
 
     trabajadores = Trabajador.objects.filter(area=area_responsable.area)
-    trabajadores_list = list(trabajadores)
 
-    for trabajador in trabajadores_list:
+    for trabajador in trabajadores:
 
         for dia in dias:
+            # Verificar si es sábado o domingo
+            if dia.weekday() == 5:
+                estado = Estado.objects.get(id=110)
+            elif dia.weekday() == 6:
+                estado = Estado.objects.get(id=111)
+            else:
+                estado = Estado.objects.get(id=109)
+
             incidencia, created = Incidencia.objects.get_or_create(
+                trabajador= trabajador,
                 fecha_asistencia=dia,
                 defaults={
                     'area': trabajador.area,
-                    'trabajador': trabajador,
+                    'estado': estado,
                 }
             )
 
     # Agrupar por empleado
     empleados_data = {}
     for incidencia in incidencias_qs.select_related('area'):
-        empleado_key = f"{incidencia.uid}_{incidencia.empleado}"
+        empleado_key = f"{incidencia.trabajador.nombre} {incidencia.trabajador.apellidos}"
         if empleado_key not in empleados_data:
             empleados_data[empleado_key] = {
-                'uid': incidencia.uid,
-                'empleado': incidencia.empleado,
+                'trabajador': incidencia.trabajador.nombre + ' ' + incidencia.trabajador.apellidos,
                 'area': incidencia.area.nombre,
                 'incidencias': {}
             }
@@ -439,9 +446,8 @@ def tabla_incidencias(request, area_id):
     tabla_datos = []
     for empleado_key, datos in empleados_data.items():
         fila = {
-            'empleado': datos['empleado'],
+            'empleado': datos['trabajador'],
             'area': datos['area'],
-            'uid': datos['uid'],
             'dias': []
         }
 
@@ -464,15 +470,16 @@ def tabla_incidencias(request, area_id):
 
         tabla_datos.append(fila)
     context = {
-        'areas_responsable': area_responsable,
-        'trabajadores_list': trabajadores_list,
+        'incidencias': incidencias_qs,
+        'area_responsable': area_responsable,
+        'trabajadores': trabajadores,
         'tabla_datos': tabla_datos,
         'dias': dias,
         'form_filtro': form_filtro,
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
-        'es_responsable': area_responsable.exists() or request.user.is_superuser,
-        'opciones_estado': Incidencia.CHOICES.items()
+        'es_responsable': area_responsable or request.user.is_superuser,
+        'opciones_estado': Estado.objects.all(),
     }
 
     return render(request, 'incidencias/tabla_incidencias.html', context)
@@ -494,6 +501,6 @@ def editar_incidencia(request, incidencia_id):
         form = IncidenciaForm(request.POST, instance=incidencia)
         if form.is_valid():
             form.save()
-            return redirect('tabla_incidencias')
+            return redirect('tabla_incidencias', area_id=incidencia.area.pk)
 
     return redirect('tabla_incidencias')

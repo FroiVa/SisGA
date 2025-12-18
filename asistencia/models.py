@@ -77,22 +77,21 @@ class Trabajador(models.Model):
         return f"{self.nombre}"
 
 
+class Estado(models.Model):
+    clave = models.CharField(max_length=100, db_column='Clave')
+    clave_id = models.CharField(max_length=10, db_column='Clave_id')
+    class Meta:
+        verbose_name = 'Estado'
+        verbose_name_plural = 'Estados'
+        db_table = 'estado'
+        ordering = ['clave',]
+    def __str__(self):
+        return f"{self.clave}"
+
 class Incidencia(models.Model):
-    CHOICES = {
-        'Asistió puntual': 'Asistió puntual',
-        'Asistió con retardo': 'Asistió con retardo',
-        'Falta justificada': 'Falta justificada',
-        'Falta injustificada': 'Falta injustificada',
-        'Vacaciones': 'Vacaciones',
-        'Incapacidad médica': 'Incapacidad',
-        'Permiso con goce de sueldo': 'Permiso con goce de sueldo',
-        'Permiso sin goce de sueldo': 'Permiso sin goce de sueldo',
-        'Teletrabajo': 'Teletrabajo',
-        'Licencia especial': 'Licencia especial',
-    }
     area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
     trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE, db_column='Trabajador', default=None)
-    estado = models.CharField(max_length=150, choices=CHOICES, db_column='Estado', default=CHOICES['Asistió puntual'], null=True, blank=True)
+    estado = models.ForeignKey(Estado, on_delete=models.CASCADE, db_column='Estado', null=True, default=None)
     fecha_asistencia = models.DateField(db_column='Fecha_Asistencia', default=datetime.date.today)
 
     class Meta:
