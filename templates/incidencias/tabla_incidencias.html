@@ -125,105 +125,100 @@
                 <!-- Tabla -->
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Incidencias</h2>
-                    </div>
-                    <div class="card-body">
-
-                        <div class="table-container">
-                            <table id="incidenciasTable" class="table table-bordered">
-                                <thead>
-                                <tr>
-                                    <th class="text-center">Empleado</th>
-
-                                    {% for dia in dias %}
-                                        <th class="text-center">{{ dia|date:"d/m" }}</th>
-                                    {% endfor %}
-                                    {#                        <th>Acciones</th>#}
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {% for fila in tabla_datos %}
-                                    <tr>
-                                        <td style="width: fit-content">
-                                            <div class="row">
-                                                <p style="font-weight: bold" >
-                                                    {{ fila.empleado }}
-                                                </p>
-                                            </div>
-                                            <div class="row" style="font-size:x-small">
-                                                <p>{{ fila.area }}</p>
-                                            </div>
-                                        </td>
-
-                                        {% for dia in fila.dias %}
-
-                                            <td>
-                                                <form method="post"
-                                                      action="{% url 'editar_incidencia' dia.incidencia_id %}">
-                                                    {% csrf_token %}
-                                                    <select name="estado" class="form-select" style="width: fit-content"
-                                                            onchange="this.form.submit()">
-                                                        {% for opcion in opciones_estado %}
-                                                            <option value="{{ opcion.clave }}"
-                                                                    {% if dia.estado.clave == opcion.clave %}selected{% endif %}>
-                                                                {{ opcion.clave_id }}
-
-                                                            </option>
-
-                                                        {% endfor %}
-                                                    </select>
-                                                </form>
-                                            </td>
-                                        {% endfor %}
-                                    </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
+                        <div class="col-11">
+                            <h2>Incidencias</h2>
                         </div>
-
-                        {% if not tabla_datos %}
-                            <div class="alert alert-info text-center">
-                                No hay incidencias registradas en el período seleccionado.
-                            </div>
-                        {% endif %}
                     </div>
+                </div>
+                <div class="card-body">
+
+                    <div class="table-container">
+                        <table id="incidenciasTable" class="table table-bordered">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Empleado</th>
+
+                                {% for dia in dias %}
+                                    <th class="text-center">{{ dia|date:"d/m" }}</th>
+                                {% endfor %}
+                                {#                        <th>Acciones</th>#}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for fila in tabla_datos %}
+                                <tr>
+                                    <td style="width: fit-content">
+                                        <div class="row">
+                                            <div>
+                                                <h6>{{ fila.empleado }}</h6>
+                                            </div>
+                                        </div>
+                                        <div class="row" style="font-size:x-small">
+                                            <p>{{ fila.area }}</p>
+                                        </div>
+                                    </td>
+
+                                    {% for dia in fila.dias %}
+
+                                        <td>
+                                            <form method="post"
+                                                  action="{% url 'editar_incidencia' dia.incidencia_id %}">
+                                                {% csrf_token %}
+                                                <select name="estado" class="form-select" style="width: fit-content"
+                                                        onchange="this.form.submit()">
+                                                    {% for opcion in opciones_estado %}
+                                                        <option value="{{ opcion.clave }}"
+                                                                {% if dia.estado.clave == opcion.clave %}selected{% endif %}>
+                                                            {{ opcion.clave_id }}
+
+                                                        </option>
+
+                                                    {% endfor %}
+                                                </select>
+                                            </form>
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if not tabla_datos %}
+                        <div class="alert alert-info text-center">
+                            No hay incidencias registradas en el período seleccionado.
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-    <h3>Trabajadores</h3>
-    {% for t in trabajadores %}
-        <div>{{ t.nombre }} {{ t.apellidos }}</div>
-    {% endfor %}
-    <h3>Areas</h3>
-
-    {{ area_responsable.area.cod_area }} {{ area_responsable.area.nombre }}
-
+    </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Incluir DataTables -->
-<script type="text/javascript" charset="utf8" src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
-<script type="text/javascript" charset="utf8" src="{% static 'js/datatables/dataTables.js' %}"></script>
+    <!-- Incluir DataTables -->
+    <script type="text/javascript" charset="utf8" src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <script type="text/javascript" charset="utf8" src="{% static 'js/datatables/dataTables.js' %}"></script>
 
-<script>
+    <script>
 
-$(document).ready(function() {
-    // Configuración básica de DataTable
-    $('#incidenciasTable').DataTable({
-        "language": {
-            "url": "{% static 'js/datatables/es-ES.json' %}"
-        },
-        "pageLength": 10, // Mostrar 15 registros por página
-        "lengthMenu": [[10, 15, 25, 50, -1], [10, 15, 25, 50, "Todos"]], // Opciones de cantidad de registros
-        "order": [], // Sin orden inicial
-        "searching": true, // Habilitar búsqueda
-        "info": true, // Mostrar información
-        "paging": true, // Habilitar paginación
-        "responsive": true, // Hacer la tabla responsive
-        "autoWidth": false, // Desactivar autoWidth para mejor control
-        "scrollX": true, // Para tablas con muchas columnas
-    });
-});
-</script>
+        $(document).ready(function () {
+            // Configuración básica de DataTable
+            $('#incidenciasTable').DataTable({
+                "language": {
+                    "url": "{% static 'js/datatables/es-ES.json' %}"
+                },
+                "pageLength": 10, // Mostrar 15 registros por página
+                "lengthMenu": [[10, 15, 25, 50, -1], [10, 15, 25, 50, "Todos"]], // Opciones de cantidad de registros
+                "order": [], // Sin orden inicial
+                "searching": true, // Habilitar búsqueda
+                "info": true, // Mostrar información
+                "paging": true, // Habilitar paginación
+                "responsive": true, // Hacer la tabla responsive
+                "autoWidth": false, // Desactivar autoWidth para mejor control
+                "scrollX": true, // Para tablas con muchas columnas
+            });
+        });
+    </script>
 {% endblock %}

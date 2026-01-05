@@ -29,7 +29,7 @@ class Area(models.Model):
 class ResponsableArea(models.Model):
     """Modelo para asignar responsables a las áreas"""
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='areas_responsable')
-    area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name='responsables')
+    area = models.ForeignKey(Area, on_delete=models.CASCADE, db_column='Area')
     fecha_asignacion = models.DateTimeField(auto_now_add=True)
     activo = models.BooleanField(default=True)
 

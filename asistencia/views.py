@@ -364,6 +364,7 @@ def responsables_listar(request):
 def tabla_incidencias(request, area_id):
     # Verificar si el usuario es responsable de algún área
     area_responsable = ResponsableArea.objects.get(area=(Area.objects.get(pk=area_id)))
+    areas_hijas = Area.objects.filter(unidad_padre=area_responsable.area.cod_area)
 
     if not area_responsable and not request.user.is_superuser:
         return render(request, 'error.html', {
@@ -374,16 +375,20 @@ def tabla_incidencias(request, area_id):
     form_filtro = FiltroFechaForm(request.GET or None)
 
     # Determinar rango de fechas
+    meses_es = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
     hoy = timezone.now().date()
+    mes = meses_es[hoy.month-1]
+    print(mes)
     if form_filtro.is_valid() and form_filtro.cleaned_data.get('fecha_inicio') and form_filtro.cleaned_data.get(
             'fecha_fin'):
         fecha_inicio = form_filtro.cleaned_data['fecha_inicio']
         fecha_fin = form_filtro.cleaned_data['fecha_fin']
     else:
         # Por defecto: desde el 20 del mes anterior hasta hoy
-        primer_dia_mes_actual = hoy.replace(day=1)
-        ultimo_dia_mes_anterior = primer_dia_mes_actual - timedelta(days=1)
-        fecha_inicio = ultimo_dia_mes_anterior.replace(day=20)
+        fecha_inicio = hoy.replace(day=1)
         fecha_fin = hoy
 
     # Generar lista de días en el rango
@@ -392,6 +397,8 @@ def tabla_incidencias(request, area_id):
     while current_date <= fecha_fin:
         dias.append(current_date)
         current_date += timedelta(days=1)
+    # Obteniendo todas las áreas que pertenecen a una misma área padre.
+
 
     # Obtener incidencias según permisos
     if request.user.is_superuser:
@@ -399,16 +406,18 @@ def tabla_incidencias(request, area_id):
             fecha_asistencia__range=[fecha_inicio, fecha_fin]
         )
     else:
-
         incidencias_qs = Incidencia.objects.filter(
             area=area_responsable.area,
-            fecha_asistencia__range=[fecha_inicio, fecha_fin]
-        )
-
-    trabajadores = Trabajador.objects.filter(area=area_responsable.area)
+            fecha_asistencia__range=[fecha_inicio, fecha_fin])
+        trabajadores = Trabajador.objects.filter(area=area_responsable.area)
+        for area in areas_hijas:
+            incidencias_qs = incidencias_qs.union(Incidencia.objects.filter(
+                area=area,
+                fecha_asistencia__range=[fecha_inicio, fecha_fin]
+            ))
+            trabajadores = trabajadores.union(Trabajador.objects.filter(area=area))
 
     for trabajador in trabajadores:
-
         for dia in dias:
             # Verificar si es sábado o domingo
             if dia.weekday() == 5:
@@ -429,7 +438,7 @@ def tabla_incidencias(request, area_id):
 
     # Agrupar por empleado
     empleados_data = {}
-    for incidencia in incidencias_qs.select_related('area'):
+    for incidencia in incidencias_qs:
         empleado_key = f"{incidencia.trabajador.nombre} {incidencia.trabajador.apellidos}"
         if empleado_key not in empleados_data:
             empleados_data[empleado_key] = {
@@ -469,7 +478,9 @@ def tabla_incidencias(request, area_id):
                 })
 
         tabla_datos.append(fila)
+
     context = {
+        'areas': areas_hijas,
         'incidencias': incidencias_qs,
         'area_responsable': area_responsable,
         'trabajadores': trabajadores,
@@ -480,6 +491,8 @@ def tabla_incidencias(request, area_id):
         'fecha_fin': fecha_fin,
         'es_responsable': area_responsable or request.user.is_superuser,
         'opciones_estado': Estado.objects.all(),
+        'mes': mes,
+
     }
 
     return render(request, 'incidencias/tabla_incidencias.html', context)
