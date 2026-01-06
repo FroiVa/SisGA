@@ -1,50 +1,749 @@
-{% load static %}
+<!-- templates/base.html -->
 <!DOCTYPE html>
-<html lang="en">
+{% load static %}
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SiGA</title>
-    <link rel="stylesheet" href="{% static 'styles/datatables/../static/styles/bootstrap.min.css' %}">
+    <title>{% block title %}Sistema de Gestión de Incidencias{% endblock %}</title>
 
-    {% block extra_head %}{% endblock %}
+    <!-- Bootstrap 5 CSS -->
+    <link href="{% static 'styles/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- Bootstrap Icons CDN Corregido -->
+    <link rel="stylesheet" href="{% static 'styles/icons/bootstrap-icons.css' %}">
 
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'styles/datatables/dataTables.bootstrap5.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'styles/responsive.bootstrap5.min.css' %}">
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            padding: 10px 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .navbar-brand i {
+            margin-right: 10px;
+        }
+
+        .sidebar-wrapper {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            height: calc(100vh - 70px);
+            width: 250px;
+            background: var(--primary-color);
+            overflow-y: auto;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .sidebar-nav .nav-item {
+            margin-bottom: 5px;
+        }
+
+        .sidebar-nav .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .sidebar-nav .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--secondary-color);
+        }
+
+        .sidebar-nav .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.15);
+            border-left-color: var(--secondary-color);
+        }
+
+        .sidebar-nav .nav-link i {
+            margin-right: 12px;
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .main-wrapper {
+            margin-left: 250px;
+            padding-top: 80px;
+            min-height: calc(100vh - 70px);
+            transition: all 0.3s;
+        }
+
+        @media (max-width: 991.98px) {
+            .sidebar-wrapper {
+                margin-left: -250px;
+            }
+
+            .main-wrapper {
+                margin-left: 0;
+            }
+
+            .sidebar-wrapper.active {
+                margin-left: 0;
+            }
+
+            .main-wrapper.active {
+                margin-left: 250px;
+            }
+        }
+
+        .content-wrapper {
+            padding: 25px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 15px 25px;
+            border: none;
+        }
+
+        .card-header h5, .card-header h6 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header h5 i, .card-header h6 i {
+            margin-right: 10px;
+        }
+
+        .stat-card {
+            padding: 25px;
+            border-radius: 12px;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .stat-card-primary { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .stat-card-success { background: linear-gradient(135deg, #27ae60 0%, #229954 100%); }
+        .stat-card-warning { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); }
+        .stat-card-danger { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+
+        .breadcrumb {
+            background: transparent;
+            padding: 0;
+            margin-bottom: 25px;
+        }
+
+        .breadcrumb-item a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--dark-color);
+            font-weight: 600;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid var(--secondary-color);
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        .btn {
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #1c6ea4 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color) 0%, #229954 100%);
+            border: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #c0392b 100%);
+            border: none;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .badge i {
+            margin-right: 5px;
+        }
+
+        .alert {
+            border: none;
+            border-radius: 10px;
+            padding: 15px 20px;
+        }
+
+        .alert i {
+            margin-right: 10px;
+        }
+
+        .messages {
+            margin-bottom: 25px;
+        }
+
+        .avatar-sm {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 1.2rem;
+        }
+
+        footer {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px 0;
+            margin-top: 40px;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--secondary-color);
+        }
+
+        .page-title {
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+        }
+
+        .page-title i {
+            margin-right: 15px;
+            color: var(--secondary-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #dee2e6;
+            margin-bottom: 20px;
+        }
+
+        .toggle-sidebar {
+            display: none;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 991.98px) {
+            .toggle-sidebar {
+                display: block;
+            }
+
+            .content-wrapper {
+                padding: 15px;
+            }
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            border: none;
+        }
+
+        .modal-header .btn-close {
+            filter: invert(1) brightness(2);
+        }
+
+        .tooltip-inner {
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2980b9;
+        }
+
+        .sidebar-wrapper::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-<nav class="navbar navbar-expand navbar-light bg-light">
-    <div class="container">
-        <!-- Logo/Marca -->
-        <a class="navbar-brand" href="{% url 'dashboard' %}">Mi Sitio</a>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+        <div class="container-fluid">
+            <!-- Toggle Sidebar Button (Mobile) -->
+            <button class="toggle-sidebar me-3" id="toggleSidebar">
+                <i class="bi bi-list"></i>
+            </button>
 
-        <!-- Botón para móviles -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                <i class="bi bi-shield-check"></i>
+                Sistema de Incidencias
+            </a>
 
-        <!-- Menú -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
-               {% if user.is_superuser %}
-                   <li class="nav-item">
-                       <a class="nav-link" href="{% url 'responsable_area_create' %}">Responsables</a>
-                   </li>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="avatar-sm bg-light text-dark me-2">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ request.user.get_full_name|default:request.user.username }}</div>
+                                <small class="text-light">
+                                    {% if request.user.is_superuser %}
+                                        Super Admin
+                                    {% elif request.user.is_staff %}
+                                        Admin
+                                    {% else %}
+                                        Usuario
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="bi bi-person me-2"></i>Mi Perfil
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="bi bi-gear me-2"></i>Configuración
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar-wrapper" id="sidebar">
+        <nav class="sidebar-nav">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                       href="{% url 'dashboard' %}">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                {% if request.user.is_staff or request.user.is_superuser %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'responsable_area' in request.resolver_match.url_name %}active{% endif %}"
+                       href="{% url 'responsable_area_list' %}">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Responsables</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if 'responsables_listar' in request.resolver_match.url_name %}active{% endif %}"
+                       href="{% url 'responsables_listar' %}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Listar Responsables</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if 'asignacion_rapida' in request.resolver_match.url_name %}active{% endif %}"
+                       href="{% url 'asignacion_rapida' %}">
+                        <i class="bi bi-lightning-charge"></i>
+                        <span>Asignación Rápida</span>
+                    </a>
+                </li>
                 {% endif %}
+
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Acerca de</a>
+                    <a class="nav-link {% if 'tabla_incidencias' in request.resolver_match.url_name %}active{% endif %}"
+                       href="#">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Incidencias</span>
+                    </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Contacto</a>
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-bar-chart"></i>
+                        <span>Reportes</span>
+                    </a>
                 </li>
+
+                {% if request.user.is_superuser %}
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>Administración</span>
+                    </a>
+                </li>
+                {% endif %}
             </ul>
+
+            <hr class="border-light my-4 opacity-25">
+
+            <!-- Información del sistema -->
+            <div class="px-4">
+                <div class="text-light small">
+                    <h6 class="text-uppercase opacity-75 mb-2">
+                        <i class="bi bi-info-circle me-2"></i>Sistema
+                    </h6>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Versión:</span>
+                        <span class="text-warning">1.0.0</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Estado:</span>
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> Activo
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-wrapper" id="mainContent">
+        <div class="content-wrapper">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    {% block breadcrumb %}
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'dashboard' %}">
+                            <i class="bi bi-house-door"></i> Inicio
+                        </a>
+                    </li>
+                    {% endblock %}
+                </ol>
+            </nav>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="messages mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {% if message.tags == 'success' %}
+                        <i class="bi bi-check-circle-fill"></i>
+                    {% elif message.tags == 'error' %}
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    {% elif message.tags == 'warning' %}
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                    {% else %}
+                        <i class="bi bi-info-circle-fill"></i>
+                    {% endif %}
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Page Title -->
+            {% block page_title %}{% endblock %}
+
+            <!-- Main Content -->
+            {% block content %}{% endblock %}
         </div>
     </div>
-</nav>
 
-{% block content %}{% endblock %}
+    <!-- Footer -->
+    <footer class="d-none d-md-block">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h6>Sistema de Gestión de Incidencias</h6>
+                    <p class="mb-0 small opacity-75">Plataforma para gestión eficiente de incidencias y responsables</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0 small">
+                        <i class="bi bi-c-circle"></i> {% now "Y" %} |
+                        <span class="text-warning">
+                            <i class="bi bi-cpu"></i> Django {{ django_version }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
 
-<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'js/bootstrap.min.js' %}"></script>
-{% block extra_js %}{% endblock %}
+    <!-- Scripts -->
+    <!-- jQuery -->
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <!-- DataTables -->
+    <script type="text/javascript" charset="utf8" src="{% static 'js/datatables/jquery.dataTables.min.js' %}"></script>
+    <script type="text/javascript" charset="utf8" src="{% static 'js/datatables/jquery.dataTables.min.js' %}"></script>
+{#    <script type="text/javascript" charset="utf8" src="{% static 'js/datatables/dataTables.responsive.min.js' %}"></script>#}
 
+    <!-- Custom Scripts -->
+    <script>
+        // Toggle sidebar en móviles
+        document.getElementById('toggleSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('mainContent').classList.toggle('active');
+        });
+
+        // Auto-close alerts después de 5 segundos
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Inicializar tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Inicializar popovers
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl);
+            });
+        });
+
+        // Función para confirmaciones
+        function confirmAction(message) {
+            return confirm(message || '¿Está seguro de realizar esta acción?');
+        }
+
+        // Función para cargar contenido modal
+        function loadModalContent(url, title) {
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al cargar el contenido');
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    const modalElement = document.getElementById('dynamicModal');
+                    if (modalElement) {
+                        const modalBody = modalElement.querySelector('.modal-body');
+                        const modalTitle = modalElement.querySelector('.modal-title');
+                        modalBody.innerHTML = html;
+                        modalTitle.textContent = title;
+
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar el contenido solicitado');
+                });
+        }
+
+        // Función para submit AJAX de formularios
+        function submitFormAjax(formElement, successCallback, errorCallback) {
+            const formData = new FormData(formElement);
+
+            fetch(formElement.action, {
+                method: formElement.method,
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (successCallback) successCallback(data);
+                } else {
+                    if (errorCallback) errorCallback(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (errorCallback) errorCallback({ message: 'Error en la solicitud' });
+            });
+        }
+    </script>
+
+    <!-- Modal Dinámico -->
+    <div class="modal fade" id="dynamicModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Contenido cargado dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Carga -->
+    <div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 bg-transparent">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-white mt-3">Procesando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,5 +1,6 @@
 # forms.py
 from django import forms
+from django.db.models import F
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from .models import ResponsableArea, Area, Incidencia
@@ -158,7 +159,7 @@ class ResponsableAreaForm(forms.ModelForm):
 
     # Campos del modelo ResponsableArea
     areas = forms.ModelMultipleChoiceField(
-        queryset=Area.objects.all(),
+        queryset=None,
         widget=forms.SelectMultiple(attrs={
             'class': 'form-select',
             'size': '6'
@@ -176,7 +177,9 @@ class ResponsableAreaForm(forms.ModelForm):
         self.fields['usuario_existente'].queryset = User.objects.filter(
             is_active=True
         ).order_by('username')
-        self.fields['areas'].queryset = Area.objects.all().order_by('nombre')
+        self.fields['areas'].queryset = Area.objects.filter(
+            cod_area=F('unidad_padre')
+        ).order_by('nombre')
 
         # Si es edición, mostrar datos actuales
         if self.instance and self.instance.pk:

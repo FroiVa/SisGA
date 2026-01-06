@@ -26,38 +26,38 @@ resultados = {
     'errores': []
 }
 
-#
-# # Probar conexión a SQL Server
-# def coneccion(sql):
-#     datos = []
-#     try:
-#         with connections['sqlserver'].cursor() as cursor:
-#             cursor.execute(sql)
-#             datos = cursor.fetchall()
-#             cursor.close()
-#             # connections.close()
-#
-#     except Exception as e:
-#         print(f"❌ Error SQL Server: {e}")
-#     return datos
-#
-# def get_areas():
-#     areas = coneccion("SELECT Id_Direccion, Desc_Direccion, GrupoNomina FROM RH_Unidades_Organizativas;")
-#     for area in areas:
-#         area, creado = Area.objects.update_or_create(
-#             cod_area=area[0],
-#             defaults={
-#                 'nombre': area[1],
-#                 'unidad_padre': area[2],
-#             }
-#         )
-#         if creado:
-#             resultados['creados'] += 1
-#             print(f"✅ CREADO: {area.cod_area} (Nombre: {area.nombre})")
-#         else:
-#             resultados['actualizados'] += 1
-#             print(f"🔄 ACTUALIZADO: {area.cod_area} (Nombre: {area.nombre})")
-#
+
+# Probar conexión a SQL Server
+def coneccion(sql):
+    datos = []
+    try:
+        with connections['sqlserver'].cursor() as cursor:
+            cursor.execute(sql)
+            datos = cursor.fetchall()
+            cursor.close()
+            # connections.close()
+
+    except Exception as e:
+        print(f"❌ Error SQL Server: {e}")
+    return datos
+
+def get_areas():
+    areas = coneccion("SELECT Id_Direccion, Desc_Direccion, GrupoNomina FROM RH_Unidades_Organizativas;")
+    for area in areas:
+        area, creado = Area.objects.update_or_create(
+            cod_area=area[0],
+            defaults={
+                'nombre': area[1],
+                'unidad_padre': area[2],
+            }
+        )
+        if creado:
+            resultados['creados'] += 1
+            print(f"✅ CREADO: {area.cod_area} (Nombre: {area.nombre})")
+        else:
+            resultados['actualizados'] += 1
+            print(f"🔄 ACTUALIZADO: {area.cod_area} (Nombre: {area.nombre})")
+
 # def get_trabajadores():
 #
 #     trabajadores = coneccion("SELECT No_CI, Nombre, Apellido_1, Apellido_2, Id_Direccion, Baja FROM Empleados_Gral where Baja=0;")
@@ -97,5 +97,5 @@ resultados = {
 #             print(f"🔄 ACTUALIZADO: {estado.clave} (Clave_Id: {estado.clave_id})")
 #
 
-# if __name__ == '__main__':
-#     get_estados()
+if __name__ == '__main__':
+    get_areas()

@@ -1,0 +1,37 @@
+<!-- templates/responsable_area/_confirm_delete.html -->
+<div class="modal-header border-danger">
+    <h5 class="modal-title text-danger">
+        <i class="bi bi-exclamation-triangle"></i> Confirmar Desactivación
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+    <div class="text-center mb-3">
+        <i class="bi bi-person-x display-4 text-danger"></i>
+    </div>
+
+    <h6 class="text-center mb-3">¿Está seguro de desactivar esta asignación?</h6>
+
+    <div class="alert alert-warning">
+        <strong>Usuario:</strong> {{ responsable.usuario.username }}<br>
+        <strong>Área:</strong> {{ responsable.area.nombre }}
+    </div>
+
+    <p class="small text-muted mb-0">
+        <i class="bi bi-info-circle"></i>
+        La asignación se marcará como inactiva pero permanecerá en el sistema.
+    </p>
+</div>
+<div class="modal-footer">
+    <form method="post" action="{% url 'responsable_area_delete' responsable.id %}" class="w-100">
+        {% csrf_token %}
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-check-circle"></i> Sí, Desactivar
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </button>
+        </div>
+    </form>
+</div>

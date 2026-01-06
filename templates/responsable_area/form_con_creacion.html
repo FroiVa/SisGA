@@ -94,8 +94,9 @@
                             <div class="col-12">
                                 <h5>2. Seleccionar Áreas</h5>
                                 <div class="mb-3">
-                                    {{ form.areas.label_tag }}
+{#                                    {{ form.areas.label_tag }}#}
                                     {{ form.areas }}
+
                                     {% if form.areas.errors %}
                                         <div class="text-danger small">
                                             {% for error in form.areas.errors %}

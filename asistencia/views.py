@@ -5,7 +5,9 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils import timezone
+from django.db.models import F
 from django.http import JsonResponse, HttpResponse
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, date, timedelta
 from .models import ResponsableArea, Area, Incidencia, Trabajador, Estado
 from dateutil.relativedelta import relativedelta
@@ -67,7 +69,6 @@ def dashboard_view(request):
     usuario = request.user
     areas = ResponsableArea.objects.filter(usuario=usuario, activo=True).select_related('area').order_by('area__nombre')
 
-
     return render(request, 'dashboard.html', {
         'user': request.user,
         'areas': areas,
@@ -103,6 +104,187 @@ def responsable_area_create(request):
     context = {
         'form': form,
         'title': 'Asignar Responsable - Crear Usuario si no Existe'
+    }
+    return render(request, 'responsable_area/form_con_creacion.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def responsable_area_list(request):
+    """
+    Vista para listar todos los responsables de áreas con opciones de gestión
+    """
+    # Obtener todos los responsables activos
+    responsables = ResponsableArea.objects.filter(activo=True).select_related(
+        'usuario', 'area'
+    ).order_by('area__nombre', 'usuario__username')
+
+    # Si se recibe un filtro por área
+    area_id = request.GET.get('area')
+    if area_id:
+        try:
+            area = Area.objects.get(pk=area_id)
+            responsables = responsables.filter(area=area)
+        except (Area.DoesNotExist, ValueError):
+            pass
+
+    # Si se recibe un filtro por usuario
+    usuario_id = request.GET.get('usuario')
+    if usuario_id:
+        try:
+            usuario = User.objects.get(pk=usuario_id)
+            responsables = responsables.filter(usuario=usuario)
+        except (User.DoesNotExist, ValueError):
+            pass
+
+    # Obtener todas las áreas para el filtro
+    areas = Area.objects.all().order_by('nombre')
+
+    # Obtener todos los usuarios que son responsables
+    usuarios_responsables = User.objects.filter(
+        areas_responsable__activo=True
+    ).distinct().order_by('username')
+
+    # Estadísticas
+    total_responsables = responsables.count()
+    areas_con_responsable = Area.objects.filter(
+        responsablearea__activo=True
+    ).distinct().count()
+    usuarios_con_asignaciones = User.objects.filter(
+        areas_responsable__activo=True
+    ).distinct().count()
+
+    # Paginación
+    page = request.GET.get('page', 1)
+    paginator = Paginator(responsables, 20)  # 20 elementos por página
+
+    try:
+        responsables_paginados = paginator.page(page)
+    except PageNotAnInteger:
+        responsables_paginados = paginator.page(1)
+    except EmptyPage:
+        responsables_paginados = paginator.page(paginator.num_pages)
+
+    context = {
+        'responsables': responsables_paginados,
+        'areas': areas,
+        'usuarios_responsables': usuarios_responsables,
+        'total_responsables': total_responsables,
+        'areas_con_responsable': areas_con_responsable,
+        'usuarios_con_asignaciones': usuarios_con_asignaciones,
+        'title': 'Gestión de Responsables de Áreas',
+        'filter_area': request.GET.get('area', ''),
+        'filter_usuario': request.GET.get('usuario', ''),
+    }
+
+    return render(request, 'responsable_area/responsable_area_list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def responsable_area_delete(request, pk):
+    """
+    Vista para desactivar una asignación de responsable (borrado lógico)
+    """
+    responsable = get_object_or_404(ResponsableArea, pk=pk)
+
+    if request.method == 'POST':
+        try:
+            # Borrado lógico (desactivar)
+            responsable.activo = False
+            responsable.save()
+
+            messages.success(
+                request,
+                f'Se ha desactivado la asignación de {responsable.usuario.username} '
+                f'para el área {responsable.area.nombre}'
+            )
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+
+            return redirect('responsable_area_list')
+
+        except Exception as e:
+            messages.error(request, f'Error al desactivar la asignación: {str(e)}')
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e)})
+
+            return redirect('responsable_area_list')
+
+    # Si es GET, mostrar confirmación
+    context = {
+        'responsable': responsable,
+        'title': 'Confirmar Desactivación'
+    }
+
+    # Si es AJAX, retornar HTML parcial
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'responsable_area/_confirm_delete.html', context)
+
+    return render(request, 'responsable_area/confirm_delete.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def responsable_area_reactivate(request, pk):
+    """
+    Vista para reactivar una asignación desactivada
+    """
+    responsable = get_object_or_404(ResponsableArea, pk=pk)
+
+    if request.method == 'POST':
+        try:
+            responsable.activo = True
+            responsable.save()
+
+            messages.success(
+                request,
+                f'Se ha reactivado la asignación de {responsable.usuario.username} '
+                f'para el área {responsable.area.nombre}'
+            )
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+
+        except Exception as e:
+            messages.error(request, f'Error al reactivar la asignación: {str(e)}')
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e)})
+
+    return redirect('responsable_area_list')
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def responsable_area_edit(request, pk):
+    """
+    Vista para editar una asignación existente
+    """
+    responsable = get_object_or_404(ResponsableArea, pk=pk)
+
+    if request.method == 'POST':
+        form = ResponsableAreaForm(request.POST, instance=responsable)
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(
+                    request,
+                    f'Asignación actualizada exitosamente para '
+                    f'{responsable.usuario.username}'
+                )
+                return redirect('responsable_area_list')
+            except Exception as e:
+                messages.error(request, f'Error al actualizar la asignación: {str(e)}')
+    else:
+        form = ResponsableAreaForm(instance=responsable)
+
+    context = {
+        'form': form,
+        'title': f'Editar Asignación: {responsable.usuario.username} - {responsable.area.nombre}',
+        'responsable': responsable
     }
     return render(request, 'responsable_area/form_con_creacion.html', context)
 
@@ -380,8 +562,8 @@ def tabla_incidencias(request, area_id):
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ]
     hoy = timezone.now().date()
-    mes = meses_es[hoy.month-1]
-    print(mes)
+    mes = meses_es[hoy.month - 1]
+
     if form_filtro.is_valid() and form_filtro.cleaned_data.get('fecha_inicio') and form_filtro.cleaned_data.get(
             'fecha_fin'):
         fecha_inicio = form_filtro.cleaned_data['fecha_inicio']
@@ -397,25 +579,20 @@ def tabla_incidencias(request, area_id):
     while current_date <= fecha_fin:
         dias.append(current_date)
         current_date += timedelta(days=1)
-    # Obteniendo todas las áreas que pertenecen a una misma área padre.
-
+        # Obteniendo todas las áreas que pertenecen a una misma área padre.
 
     # Obtener incidencias según permisos
-    if request.user.is_superuser:
-        incidencias_qs = Incidencia.objects.filter(
+
+    incidencias_qs = Incidencia.objects.filter(
+        area=area_responsable.area,
+        fecha_asistencia__range=[fecha_inicio, fecha_fin])
+    trabajadores = Trabajador.objects.filter(area=area_responsable.area)
+    for area in areas_hijas:
+        incidencias_qs = incidencias_qs.union(Incidencia.objects.filter(
+            area=area,
             fecha_asistencia__range=[fecha_inicio, fecha_fin]
-        )
-    else:
-        incidencias_qs = Incidencia.objects.filter(
-            area=area_responsable.area,
-            fecha_asistencia__range=[fecha_inicio, fecha_fin])
-        trabajadores = Trabajador.objects.filter(area=area_responsable.area)
-        for area in areas_hijas:
-            incidencias_qs = incidencias_qs.union(Incidencia.objects.filter(
-                area=area,
-                fecha_asistencia__range=[fecha_inicio, fecha_fin]
-            ))
-            trabajadores = trabajadores.union(Trabajador.objects.filter(area=area))
+        ))
+        trabajadores = trabajadores.union(Trabajador.objects.filter(area=area))
 
     for trabajador in trabajadores:
         for dia in dias:
@@ -428,7 +605,7 @@ def tabla_incidencias(request, area_id):
                 estado = Estado.objects.get(id=109)
 
             incidencia, created = Incidencia.objects.get_or_create(
-                trabajador= trabajador,
+                trabajador=trabajador,
                 fecha_asistencia=dia,
                 defaults={
                     'area': trabajador.area,
@@ -503,12 +680,12 @@ def editar_incidencia(request, incidencia_id):
     incidencia = get_object_or_404(Incidencia, id=incidencia_id)
 
     # Verificar permisos
-    if not request.user.is_superuser:
-        es_responsable = ResponsableArea.es_responsable_area(request.user, incidencia.area)
-        if not es_responsable:
-            return render(request, 'error.html', {
-                'mensaje': 'No tienes permisos para editar esta incidencia'
-            })
+
+    es_responsable = ResponsableArea.es_responsable_area(request.user, incidencia.area)
+    if not es_responsable:
+        return render(request, 'error.html', {
+            'mensaje': 'No tienes permisos para editar esta incidencia'
+        })
 
     if request.method == 'POST':
         form = IncidenciaForm(request.POST, instance=incidencia)
@@ -516,4 +693,4 @@ def editar_incidencia(request, incidencia_id):
             form.save()
             return redirect('tabla_incidencias', area_id=incidencia.area.pk)
 
-    return redirect('tabla_incidencias')
+    return redirect('tabla_incidencias', area_id=incidencia.area.pk)

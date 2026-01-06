@@ -20,6 +20,11 @@ urlpatterns = [
     path('responsables/buscar-usuario-ajax/', views.buscar_usuario_ajax, name='buscar_usuario_ajax'),
     path('usuarios/crear/', views.gestion_usuario_completa, name='crear_usuario'),
     path('usuarios/editar/<int:usuario_id>/', views.gestion_usuario_completa, name='editar_usuario'),
+    path('responsables/', views.responsable_area_list, name='responsable_area_list'),
+    path('responsables/crear/', views.responsable_area_create, name='responsable_area_create'),
+    path('responsables/<int:pk>/editar/', views.responsable_area_edit, name='responsable_area_edit'),
+    path('responsables/<int:pk>/eliminar/', views.responsable_area_delete, name='responsable_area_delete'),
+    path('responsables/<int:pk>/reactivar/', views.responsable_area_reactivate, name='responsable_area_reactivate'),
 
 
 

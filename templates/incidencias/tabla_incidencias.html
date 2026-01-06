@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block extra_head %}
-    <link rel="stylesheet" type="text/css" href="{% static 'styles/datatables/datatables.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'styles/datatables/dataTables.bootstrap5.min.css' %}"></link>
 {% endblock %}
 {% block title %}Gestión de Incidencias{% endblock %}
@@ -124,6 +123,7 @@
 
                 <!-- Tabla -->
                 <div class="card">
+                    <div class="card">
                     <div class="card-header">
                         <div class="col-11">
                             <h2>Incidencias</h2>
@@ -137,11 +137,10 @@
                             <thead>
                             <tr>
                                 <th class="text-center">Empleado</th>
-
                                 {% for dia in dias %}
                                     <th class="text-center">{{ dia|date:"d/m" }}</th>
                                 {% endfor %}
-                                {#                        <th>Acciones</th>#}
+
                             </tr>
                             </thead>
                             <tbody>
@@ -190,6 +189,7 @@
                         </div>
                     {% endif %}
                 </div>
+                </div>
             </div>
         </div>
     </div>
@@ -199,8 +199,8 @@
 {% block extra_js %}
     <!-- Incluir DataTables -->
     <script type="text/javascript" charset="utf8" src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
-    <script type="text/javascript" charset="utf8" src="{% static 'js/datatables/dataTables.js' %}"></script>
-
+    <script type="text/javascript" charset="utf8"
+            src="{% static 'js/datatables/dataTables.bootstrap5.min.js' %}"></script>
     <script>
 
         $(document).ready(function () {

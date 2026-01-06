@@ -1,0 +1,471 @@
+<!-- templates/responsable_area/responsable_area_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_head %}
+    <link rel="stylesheet" type="text/css" href="{% static 'styles/datatables/dataTables.bootstrap5.min.css' %}">
+{#    <link href="{% static 'styles/select2.min.css' %}" rel="stylesheet"/>#}
+{#    <link href="{% static 'styles/select2-bootstrap-5-theme.min.css' %}" rel="stylesheet"/>#}
+{#    #}
+{#     <style>#}
+{#        /* Estilos adicionales para Select2 */#}
+{#        .select2-container--bootstrap-5 .select2-selection {#}
+{#            min-height: 48px;#}
+{#            border-radius: 8px;#}
+{#        }#}
+{##}
+{#        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {#}
+{#            line-height: 48px;#}
+{#            padding-left: 15px;#}
+{#        }#}
+{##}
+{#        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {#}
+{#            height: 48px;#}
+{#        }#}
+{#    </style>#}
+{% endblock %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item active">Gestión de Responsables</li>
+{% endblock %}
+
+{% block page_title %}
+    <div class="page-title">
+        <h1>
+            <i class="bi bi-people-fill"></i>
+            {{ title }}
+            <small class="text-muted fs-6">Gestión de responsables por área</small>
+        </h1>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid px-0">
+        <!-- Botones de Acción Rápidos -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <div class="btn-group">
+                    <a href="{% url 'responsable_area_create' %}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i> Nueva Asignación
+                    </a>
+                    <a href="{% url 'asignacion_rapida' %}" class="btn btn-success">
+                        <i class="bi bi-lightning-charge"></i> Asignación Rápida
+                    </a>
+                    <a href="{% url 'crear_usuario' %}" class="btn btn-info">
+                        <i class="bi bi-person-add"></i> Crear Usuario
+                    </a>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center">
+            <span class="badge bg-secondary me-3">
+                <i class="bi bi-clock"></i> {% now "H:i" %}
+            </span>
+            </div>
+        </div>
+
+        <!-- Tarjetas de Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-card-primary">
+                    <i class="bi bi-people-fill"></i>
+                    <div class="stat-number">{{ total_responsables }}</div>
+                    <div class="stat-label">Asignaciones Activas</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-card-success">
+                    <i class="bi bi-building"></i>
+                    <div class="stat-number">{{ areas_con_responsable }}</div>
+                    <div class="stat-label">Áreas con Responsable</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-card-warning">
+                    <i class="bi bi-person-check"></i>
+                    <div class="stat-number">{{ usuarios_con_asignaciones }}</div>
+                    <div class="stat-label">Usuarios Responsables</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-card-danger">
+                    <i class="bi bi-building-slash"></i>
+                    <div class="stat-number">
+                        {{ areas.count|add:"-areas_con_responsable"|default:0 }}
+                    </div>
+                    <div class="stat-label">Áreas sin Responsable</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Filtros -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel-fill"></i> Filtros de Búsqueda
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-building me-1"></i>Filtrar por Área
+                        </label>
+                        <select name="area" id="area" class="form-select form-select-lg">
+                            <option value="">Todas las áreas</option>
+                            {% for area in areas %}
+                                <option value="{{ area.id }}"
+                                        {% if filter_area == area.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ area.nombre }} ({{ area.cod_area }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-person me-1"></i>Filtrar por Usuario
+                        </label>
+                        <select name="usuario" id="usuario" class="form-select form-select-lg">
+                            <option value="">Todos los usuarios</option>
+                            {% for usuario in usuarios_responsables %}
+                                <option value="{{ usuario.id }}"
+                                        {% if filter_usuario == usuario.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ usuario.get_full_name|default:usuario.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="d-grid gap-2 w-100">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-search"></i> Filtrar
+                            </button>
+                            <a href="{% url 'responsable_area_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla de Responsables -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> Listado de Responsables
+                </h5>
+                <span class="badge bg-primary">
+                <i class="bi bi-info-circle"></i>
+                Mostrando {{ responsables.object_list.count }} registros
+            </span>
+            </div>
+            <div class="card-body p-0">
+                {% if responsables.object_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">
+                                    <i class="bi bi-person me-1"></i>Usuario
+                                </th>
+                                <th>
+                                    <i class="bi bi-card-text me-1"></i>Nombre
+                                </th>
+                                <th>
+                                    <i class="bi bi-building me-1"></i>Área
+                                </th>
+                                <th>
+                                    <i class="bi bi-code me-1"></i>Código
+                                </th>
+                                <th>
+                                    <i class="bi bi-calendar me-1"></i>Fecha
+                                </th>
+                                <th>
+                                    <i class="bi bi-circle-fill me-1"></i>Estado
+                                </th>
+                                <th class="text-center pe-4">
+                                    <i class="bi bi-gear me-1"></i>Acciones
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for responsable in responsables %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white me-3">
+                                                <i class="bi bi-person"></i>
+                                            </div>
+                                            <div>
+                                                <strong class="d-block">{{ responsable.usuario.username }}</strong>
+                                                <small class="text-muted">{{ responsable.usuario.email|default:"Sin email" }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {{ responsable.usuario.get_full_name|default:"No especificado" }}
+                                    </td>
+                                    <td>
+                                <span class="badge bg-info text-dark">
+                                    <i class="bi bi-building"></i>
+                                    {{ responsable.area.nombre }}
+                                </span>
+                                    </td>
+                                    <td>
+                                        <code class="bg-light p-1 rounded">{{ responsable.area.cod_area }}</code>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span>{{ responsable.fecha_asignacion|date:"d/m/Y" }}</span>
+                                            <small class="text-muted">{{ responsable.fecha_asignacion|date:"H:i" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if responsable.activo %}
+                                            <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Activo
+                                </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle"></i> Inactivo
+                                </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'editar_usuario' responsable.usuario.id %}"
+                                               class="btn btn-outline-primary"
+                                               data-bs-toggle="tooltip"
+                                               title="Editar usuario">
+                                                <i class="bi bi-person-gear"></i>
+                                            </a>
+                                            <button type="button"
+                                                    onclick="loadModalContent('{% url 'responsable_area_edit' responsable.id %}', 'Editar Asignación')"
+                                                    class="btn btn-outline-warning"
+                                                    data-bs-toggle="tooltip"
+                                                    title="Editar asignación">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            {% if responsable.activo %}
+                                                <form method="post"
+                                                      action="{% url 'responsable_area_delete' responsable.id %}"
+                                                      onsubmit="return confirmAction('¿Desactivar esta asignación?')"
+                                                      class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit"
+                                                            class="btn btn-outline-danger"
+                                                            data-bs-toggle="tooltip"
+                                                            title="Desactivar">
+                                                        <i class="bi bi-person-dash"></i>
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <form method="post"
+                                                      action="{% url 'responsable_area_reactivate' responsable.id %}"
+                                                      class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit"
+                                                            class="btn btn-outline-success"
+                                                            data-bs-toggle="tooltip"
+                                                            title="Reactivar">
+                                                        <i class="bi bi-person-check"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginación -->
+                    {% if responsables.has_other_pages %}
+                        <div class="card-footer">
+                            <nav aria-label="Paginación">
+                                <ul class="pagination justify-content-center mb-0">
+                                    {% if responsables.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page=1{% if filter_area %}&area={{ filter_area }}{% endif %}{% if filter_usuario %}&usuario={{ filter_usuario }}{% endif %}">
+                                                <i class="bi bi-chevron-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page=
+                                                       {{ responsables.previous_page_number }}{% if filter_area %}&area={{ filter_area }}{% endif %}{% if filter_usuario %}&usuario={{ filter_usuario }}{% endif %}">
+                                                <i class="bi bi-chevron-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in responsables.paginator.page_range %}
+                                        {% if num >= responsables.number|add:"-2" and num <= responsables.number|add:"2" %}
+                                            <li class="page-item {% if num == responsables.number %}active{% endif %}">
+                                                <a class="page-link"
+                                                   href="?page=
+                                                           {{ num }}{% if filter_area %}&area={{ filter_area }}{% endif %}{% if filter_usuario %}&usuario={{ filter_usuario }}{% endif %}">
+                                                    {{ num }}
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if responsables.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page=
+                                                       {{ responsables.next_page_number }}{% if filter_area %}&area={{ filter_area }}{% endif %}{% if filter_usuario %}&usuario={{ filter_usuario }}{% endif %}">
+                                                <i class="bi bi-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page=
+                                                       {{ responsables.paginator.num_pages }}{% if filter_area %}&area={{ filter_area }}{% endif %}{% if filter_usuario %}&usuario={{ filter_usuario }}{% endif %}">
+                                                <i class="bi bi-chevron-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                    {% endif %}
+
+                {% else %}
+                    <!-- Estado vacío -->
+                    <div class="empty-state py-5">
+                        <i class="bi bi-people display-1"></i>
+                        <h4 class="mt-3">No hay responsables asignados</h4>
+                        <p class="text-muted mb-4">
+                            {% if filter_area or filter_usuario %}
+                                No se encontraron resultados con los filtros aplicados.
+                            {% else %}
+                                Comience asignando responsables a las áreas del sistema.
+                            {% endif %}
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'responsable_area_create' %}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-person-plus"></i> Crear Asignación
+                            </a>
+                            <a href="{% url 'asignacion_rapida' %}" class="btn btn-success btn-lg">
+                                <i class="bi bi-lightning-charge"></i> Asignación Rápida
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Información Adicional -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">
+                            <i class="bi bi-info-circle-fill"></i> Información Importante
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Un usuario puede ser responsable de múltiples áreas
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Un área puede tener múltiples responsables
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Las asignaciones inactivas no se eliminan
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Puede reactivar asignaciones desactivadas
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Use filtros para encontrar rápidamente
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">
+                            <i class="bi bi-lightbulb-fill"></i> Consejos Prácticos
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
+                                Use "Asignación Rápida" para asignaciones simples
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
+                                Revise regularmente áreas sin responsable
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
+                                Mantenga actualizados los datos de usuarios
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
+                                Use filtros combinados para búsquedas precisas
+                            </li>
+                            <li>
+                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
+                                Exporte datos para análisis externos
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Incluir DataTables -->
+    <script type="text/javascript" charset="utf8" src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <script type="text/javascript" charset="utf8"
+            src="{% static 'js/datatables/dataTables.bootstrap5.min.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar DataTables
+            $('table').DataTable({
+                "language": {
+                    "url": "{% static 'js/datatables/es-ES.json' %}"
+                },
+                "order": [[0, "asc"]],
+                "pageLength": 10,
+                "responsive": true,
+                "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                "columnDefs": [
+                    {"orderable": false, "targets": [6]}
+                ]
+            });
+
+            // Mejorar la experiencia de filtros
+            $('#area, #usuario').select2({
+                theme: 'bootstrap-5',
+                placeholder: "Seleccione una opción",
+                allowClear: true
+            });
+        });
+    </script>
+
+    <!-- Select2 CSS y JS -->
+
+    <script src="{% static 'js/select2.min.js' %}"></script>
+
+
+{% endblock %}

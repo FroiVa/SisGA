@@ -23,7 +23,7 @@ class Area(models.Model):
         db_table = 'area'
 
     def __str__(self):
-        return self.nombre
+        return f"{self.cod_area} {self.nombre}"
 
 
 class ResponsableArea(models.Model):
