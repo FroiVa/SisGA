@@ -10,7 +10,7 @@
     <!-- Bootstrap 5 CSS -->
     <link href="{% static 'styles/bootstrap.min.css' %}" rel="stylesheet">
     <!-- Bootstrap Icons CDN Corregido -->
-    <link rel="stylesheet" href="{% static 'styles/icons/bootstrap-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'styles/icons/bootstrap-icons.min.css' %}">
 
     <!-- DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="{% static 'styles/datatables/dataTables.bootstrap5.min.css' %}">
@@ -129,7 +129,7 @@
         .card {
             border: none;
             border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             margin-bottom: 25px;
             transition: transform 0.3s, box-shadow 0.3s;
         }
@@ -412,7 +412,7 @@
             </button>
 
             <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="bi bi-shield-check"></i>
+                <i class="bi-shield-check"></i>
                 Sistema de Incidencias
             </a>
 

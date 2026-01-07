@@ -680,17 +680,21 @@ def editar_incidencia(request, incidencia_id):
     incidencia = get_object_or_404(Incidencia, id=incidencia_id)
 
     # Verificar permisos
-
-    es_responsable = ResponsableArea.es_responsable_area(request.user, incidencia.area)
-    if not es_responsable:
-        return render(request, 'error.html', {
-            'mensaje': 'No tienes permisos para editar esta incidencia'
-        })
+    if not request.user.is_superuser:
+        es_responsable = ResponsableArea.es_responsable_area(request.user, incidencia.area)
+        print(es_responsable)
+        if not es_responsable:
+            return render(request, 'error.html', {
+                'mensaje': 'No tienes permisos para editar esta incidencia'
+            })
 
     if request.method == 'POST':
+        print(request.POST)
         form = IncidenciaForm(request.POST, instance=incidencia)
         if form.is_valid():
-            form.save()
-            return redirect('tabla_incidencias', area_id=incidencia.area.pk)
+            print("valido")
+            incidencia = form.save()
+            print(incidencia)
+            return redirect('tabla_incidencias')
 
-    return redirect('tabla_incidencias', area_id=incidencia.area.pk)
+    return redirect('tabla_incidencias', area_id=incidencia.area.id)

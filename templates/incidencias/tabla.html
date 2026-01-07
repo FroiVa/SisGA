@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Control de Incidencias</h2>
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <form method="get" class="row g-3">
+                    <div class="col-md-5">
+                        {{ form_filtro.fecha_inicio.label_tag }}
+                        {{ form_filtro.fecha_inicio }}
+                    </div>
+                    <div class="col-md-5">
+                        {{ form_filtro.fecha_fin.label_tag }}
+                        {{ form_filtro.fecha_fin }}
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Filtrar</button>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-6 text-end">
+                <p class="text-muted">
+                    Mostrando del {{ fecha_inicio|date:"d/m/Y" }} al {{ fecha_fin|date:"d/m/Y" }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-container">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Área</th>
+                        {% for dia in dias %}
+                            <th class="text-center">{{ dia|date:"d/m" }}</th>
+                        {% endfor %}
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in tabla_datos %}
+                    <tr>
+                        <td>{{ fila.empleado }}</td>
+                        <td>{{ fila.area }}</td>
+                        {% for dia in fila.dias %}
+                            <td class="text-center estado-cell {% if not dia.tiene_incidencia %}no-registrado{% endif %}">
+                                {% if dia.tiene_incidencia %}
+                                    {{ dia.estado }}
+                                {% else %}
+                                    {{ dia.estado }}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                        <td>
+                            <button type="button" class="btn btn-sm btn-warning"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditar{{ forloop.counter }}">
+                                Editar
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if not tabla_datos %}
+        <div class="alert alert-info text-center">
+            No hay incidencias registradas en el período seleccionado.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modales para editar -->
+{% for fila in tabla_datos %}
+<div class="modal fade" id="modalEditar{{ forloop.counter }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Incidencias - {{ fila.empleado }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dia in fila.dias %}
+                            {% if dia.tiene_incidencia %}
+                            <tr>
+                                <td>{{ dia.fecha|date:"d/m/Y" }}</td>
+                                <td>
+                                    <form method="post" action="{% url 'editar_incidencia' dia.incidencia_id %}">
+                                        {% csrf_token %}
+                                        <select name="estado" class="form-select" onchange="this.form.submit()">
+                                            {% for key, value in opciones_estado %}
+                                                <option value="{{ key }}" {% if dia.estado == key %}selected{% endif %}>
+                                                    {{ value }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
