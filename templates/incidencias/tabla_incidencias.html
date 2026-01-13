@@ -123,102 +123,120 @@
 
                 <!-- Tabla -->
                 <div class="card mb-4">
-                    <div class="table-container">
-                    <table class="table table-bordered table-striped">
-                        <thead class="table-dark">
-                        <tr>
-                            <th>Empleado</th>
-                            <th>Área</th>
-                            {% for dia in dias %}
-                                <th class="text-center">{{ dia|date:"d/m" }}</th>
-                            {% endfor %}
-                            <th>Acciones</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for fila in tabla_datos %}
-                            <tr>
-                                <td>{{ fila.empleado }}</td>
-                                <td>{{ fila.area }}</td>
-                                {% for dia in fila.dias %}
-                                    <td class="text-center estado-cell {% if not dia.tiene_incidencia %}no-registrado{% endif %}">
-                                        {% if dia.tiene_incidencia %}
-                                            {{ dia.estado }}
-                                        {% else %}
-                                            {{ dia.estado }}
-                                        {% endif %}
-                                    </td>
+                    <div class="card-header">
+                        <h2 class="card-title">Incidencias</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="incidenciasTable" class="table table-bordered">
+                                <thead>
+                                <tr>
+                                    <th class="text-center">Empleado</th>
+                                    <th>Área</th>
+                                    {% for dia in dias %}
+                                        <th class="text-center">{{ dia|date:"d/m" }}</th>
+                                    {% endfor %}
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for fila in tabla_datos %}
+                                    <tr>
+                                        <td>{{ fila.empleado }}</td>
+                                        <td>{{ fila.area }}</td>
+                                        {% for dia in fila.dias %}
+                                            <td class="text-center estado-cell {% if not dia.tiene_incidencia %}no-registrado{% endif %}">
+                                                <form method="post"
+                                                      action="{% url 'editar_incidencia' dia.incidencia_id area_id %}">
+                                                    {% csrf_token %}
+                                                    <select name="estado" class="form-select"
+                                                            onchange="this.form.submit()">
+                                                        {% for estado_obj in opciones_estado %}
+                                                            <option value="{{ estado_obj.id }}"
+                                                                    {% if dia.estado.id == estado_obj.id %}selected{% endif %}>
+                                                                {{ estado_obj.clave_id }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </form>
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
                                 {% endfor %}
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalEditar{{ forloop.counter }}">
-                                        Editar
-                                    </button>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                </div>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
+                </div>
 
                 {% if not tabla_datos %}
                     <div class="alert alert-info text-center">
                         No hay incidencias registradas en el período seleccionado.
                     </div>
                 {% endif %}
-            </div>
-        </div>
-    </div>
 
-    <!-- Modales para editar -->
-{% for fila in tabla_datos %}
-<div class="modal fade" id="modalEditar{{ forloop.counter }}" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Editar Incidencias - {{ fila.empleado }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for dia in fila.dias %}
-                            {% if dia.tiene_incidencia %}
-                            <tr>
-                                <td>{{ dia.fecha|date:"d/m/Y" }}</td>
-                                <td>
-                                    <form method="post" action="{% url 'editar_incidencia' dia.incidencia_id %}">
-                                        {% csrf_token %}
-                                        <select name="estado" class="form-select" onchange="this.form.submit()">
-                                            {% for estado in opciones_estado %}
-                                                <option value="{{ estado }}" {% if dia.estado == estado %}selected{% endif %}>
-                                                    {{ estado.clave }}
-                                                </option>
-                                            {% endfor %}
-                                        </select>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div>
+                    {% if areas %}
+                        <h3>Areas hijas</h3>
+
+                        {% for a in areas %}
+                            <div>{{ a.cod_area }} {{ a.nombre }} {{ a.unidad_padre }}</div>
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endfor %}
+
+    {#    <!-- Modales para editar -->#}
+    {#    {% for fila in tabla_datos %}#}
+    {#        <div class="modal fade" id="modalEditar{{ forloop.counter }}" tabindex="-1">#}
+    {#            <div class="modal-dialog modal-lg">#}
+    {#                <div class="modal-content">#}
+    {#                    <div class="modal-header">#}
+    {#                        <h5 class="modal-title">Editar Incidencias - {{ fila.empleado }}</h5>#}
+    {#                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>#}
+    {#                    </div>#}
+    {#                    <div class="modal-body">#}
+    {#                        <div class="table-responsive">#}
+    {#                            <table class="table table-bordered">#}
+    {#                                <thead>#}
+    {#                                <tr>#}
+    {#                                    <th>Fecha</th>#}
+    {#                                    <th>Estado</th>#}
+    {#                                </tr>#}
+    {#                                </thead>#}
+    {#                                <tbody>#}
+    {#                                {% for dia in fila.dias %}#}
+    {#                                    {% if dia.tiene_incidencia %}#}
+    {#                                        <tr>#}
+    {#                                            <td>{{ dia.fecha|date:"d/m/Y" }}</td>#}
+    {#                                            <td>#}
+    {#                                                <form method="post"#}
+    {#                                                      action="{% url 'editar_incidencia' incidencia_id=dia.incidencia_id area_id=area_id %}">#}
+    {#                                                    {% csrf_token %}#}
+    {#                                                    <select name="estado" class="form-select"#}
+    {#                                                            onchange="this.form.submit()">#}
+    {#                                                        {% for estado in opciones_estado %}#}
+    {#                                                            <option value="{{ estado }}"#}
+    {#                                                                    {% if dia.estado == estado %}selected{% endif %}>#}
+    {#                                                                {{ estado.clave }}#}
+    {#                                                            </option>#}
+    {#                                                        {% endfor %}#}
+    {#                                                    </select>#}
+    {#                                                </form>#}
+    {#                                            </td>#}
+    {#                                        </tr>#}
+    {#                                    {% endif %}#}
+    {#                                {% endfor %}#}
+    {#                                </tbody>#}
+    {#                            </table>#}
+    {#                        </div>#}
+    {#                    </div>#}
+    {#                </div>#}
+    {#            </div>#}
+    {#        </div>#}
+    {#    {% endfor %}#}
 {% endblock %}
 
 {% block extra_js %}
@@ -234,7 +252,7 @@
                 "language": {
                     "url": "{% static 'js/datatables/es-ES.json' %}"
                 },
-                "pageLength": 10, // Mostrar 15 registros por página
+                "pageLength": 15, // Mostrar 15 registros por página
                 "lengthMenu": [[10, 15, 25, 50, -1], [10, 15, 25, 50, "Todos"]], // Opciones de cantidad de registros
                 "order": [], // Sin orden inicial
                 "searching": true, // Habilitar búsqueda

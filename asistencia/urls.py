@@ -9,7 +9,7 @@ urlpatterns = [
     path('', views.dashboard_view, name='dashboard'),
     # Incidencias
     path('incidencias/<int:area_id>/', views.tabla_incidencias, name='tabla_incidencias'),
-    path('editar/<int:incidencia_id>/', views.editar_incidencia, name='editar_incidencia'),
+    path('editar/<int:incidencia_id>/<int:area_id>', views.editar_incidencia, name='editar_incidencia'),
 
     # URLs existentes...
     path('responsables/listar', views.responsables_listar, name='responsables_listar'),

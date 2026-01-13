@@ -56,7 +56,7 @@ class ResponsableArea(models.Model):
     @classmethod
     def es_responsable_area(cls, usuario, area):
         """Verifica si un usuario es responsable de un área específica"""
-        return cls.objects.filter(usuario=usuario, area=area, activo=True).exists()
+        return cls.objects.filter(usuario=usuario, area=area, activo=True)
 
 
 class Trabajador(models.Model):

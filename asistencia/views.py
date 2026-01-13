@@ -138,7 +138,9 @@ def responsable_area_list(request):
             pass
 
     # Obtener todas las áreas para el filtro
-    areas = Area.objects.all().order_by('nombre')
+    areas = Area.objects.filter(
+            cod_area=F('unidad_padre')
+        ).order_by('nombre')
 
     # Obtener todos los usuarios que son responsables
     usuarios_responsables = User.objects.filter(
@@ -191,8 +193,8 @@ def responsable_area_delete(request, pk):
     if request.method == 'POST':
         try:
             # Borrado lógico (desactivar)
-            responsable.activo = False
-            responsable.save()
+
+            responsable.delete()
 
             messages.success(
                 request,
@@ -216,7 +218,7 @@ def responsable_area_delete(request, pk):
     # Si es GET, mostrar confirmación
     context = {
         'responsable': responsable,
-        'title': 'Confirmar Desactivación'
+        'title': 'Confirmar Eliminación'
     }
 
     # Si es AJAX, retornar HTML parcial
@@ -525,7 +527,9 @@ def gestion_usuario_completa(request, usuario_id=None):
     context = {
         'user_form': user_form,
         'usuario': usuario,
-        'areas': Area.objects.all().order_by('nombre'),
+        'areas': Area.objects.filter(
+            cod_area=F('unidad_padre')
+        ).order_by('nombre'),
         'areas_actuales': areas_actuales,
         'title': 'Editar Usuario' if usuario else 'Crear Usuario'
     }
@@ -545,8 +549,9 @@ def responsables_listar(request):
 @login_required
 def tabla_incidencias(request, area_id):
     # Verificar si el usuario es responsable de algún área
-    area_responsable = ResponsableArea.objects.get(area=(Area.objects.get(pk=area_id)))
-    areas_hijas = Area.objects.filter(unidad_padre=area_responsable.area.cod_area)
+    area_responsable = ResponsableArea.objects.get(usuario=request.user,activo=True,area__id=area_id)
+
+    areas_hijas = Area.objects.filter(unidad_padre=Area.objects.get(pk=area_id).cod_area)
 
     if not area_responsable and not request.user.is_superuser:
         return render(request, 'error.html', {
@@ -657,6 +662,7 @@ def tabla_incidencias(request, area_id):
         tabla_datos.append(fila)
 
     context = {
+        'area_id': area_id,
         'areas': areas_hijas,
         'incidencias': incidencias_qs,
         'area_responsable': area_responsable,
@@ -676,25 +682,41 @@ def tabla_incidencias(request, area_id):
 
 
 @login_required
-def editar_incidencia(request, incidencia_id):
+def editar_incidencia(request, incidencia_id, area_id):
+    """Vista para actualizar el estado usando IncidenciaForm"""
+
     incidencia = get_object_or_404(Incidencia, id=incidencia_id)
 
-    # Verificar permisos
-    if not request.user.is_superuser:
-        es_responsable = ResponsableArea.es_responsable_area(request.user, incidencia.area)
-        print(es_responsable)
-        if not es_responsable:
-            return render(request, 'error.html', {
-                'mensaje': 'No tienes permisos para editar esta incidencia'
-            })
+    # Crear formulario con los datos POST
+    form = IncidenciaForm(request.POST, instance=incidencia)
 
-    if request.method == 'POST':
-        print(request.POST)
-        form = IncidenciaForm(request.POST, instance=incidencia)
-        if form.is_valid():
-            print("valido")
-            incidencia = form.save()
-            print(incidencia)
-            return redirect('tabla_incidencias')
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Incidencia actualizada correctamente')
+    else:
+        # Mostrar errores en consola para depurar
+        print("Errores del formulario:", form.errors)
+        messages.error(request, 'Error al actualizar la incidencia')
 
-    return redirect('tabla_incidencias', area_id=incidencia.area.id)
+    return redirect('tabla_incidencias', area_id=area_id)
+    # incidencia = get_object_or_404(Incidencia, id=incidencia_id)
+    # print(f"Incidencia: {incidencia}")
+    # # Verificar permisos
+    # if not request.user.is_superuser:
+    #     es_responsable = ResponsableArea.es_responsable_area(request.user, incidencia.area)
+    #     print(f"Responsable: {es_responsable}")
+    #     if not es_responsable:
+    #         return render(request, 'error.html', {
+    #             'mensaje': 'No tienes permisos para editar esta incidencia'
+    #         })
+    #
+    # if request.method == 'POST':
+    #     print(f"Request: {request.POST}")
+    #     form = IncidenciaForm(request.POST, instance=incidencia)
+    #     if form.is_valid():
+    #         print("valido")
+    #         incidencia = form.save()
+    #         print(f"Incidencia: {incidencia}")
+    #         return redirect('tabla_incidencias',area_id=area_id)
+    #
+    # return redirect('tabla_incidencias',area_id=area_id)

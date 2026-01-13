@@ -3,7 +3,9 @@ from django import forms
 from django.db.models import F
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
-from .models import ResponsableArea, Area, Incidencia
+from django.forms import ChoiceField
+
+from .models import ResponsableArea, Area, Incidencia, Estado
 from django.contrib.auth.models import User
 import re
 
@@ -323,6 +325,11 @@ class IncidenciaForm(forms.ModelForm):
                 'onchange': 'this.form.submit()'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Asegurar que el queryset del campo estado esté correctamente configurado
+        self.fields['estado'].queryset = Estado.objects.all()
 
 class FiltroFechaForm(forms.Form):
     fecha_inicio = forms.DateField(

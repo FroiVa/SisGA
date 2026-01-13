@@ -6,22 +6,22 @@
 {#    <link href="{% static 'styles/select2.min.css' %}" rel="stylesheet"/>#}
 {#    <link href="{% static 'styles/select2-bootstrap-5-theme.min.css' %}" rel="stylesheet"/>#}
 {#    #}
-{#     <style>#}
-{#        /* Estilos adicionales para Select2 */#}
-{#        .select2-container--bootstrap-5 .select2-selection {#}
-{#            min-height: 48px;#}
-{#            border-radius: 8px;#}
-{#        }#}
-{##}
-{#        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {#}
-{#            line-height: 48px;#}
-{#            padding-left: 15px;#}
-{#        }#}
-{##}
-{#        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {#}
-{#            height: 48px;#}
-{#        }#}
-{#    </style>#}
+     <style>
+        /* Estilos adicionales para Select2 */
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 48px;
+            border-radius: 8px;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            line-height: 48px;
+            padding-left: 15px;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+            height: 48px;
+        }
+    </style>
 {% endblock %}
 {% block title %}{{ title }}{% endblock %}
 
@@ -35,7 +35,7 @@
         <h1>
             <i class="bi bi-people-fill"></i>
             {{ title }}
-            <small class="text-muted fs-6">Gestión de responsables por área</small>
+            {#<small class="text-muted fs-6">Gestión de responsables por área</small>#}
         </h1>
     </div>
 {% endblock %}
@@ -161,10 +161,10 @@
                 Mostrando {{ responsables.object_list.count }} registros
             </span>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body">
                 {% if responsables.object_list %}
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                    <div class="table-container">
+                        <table class="table table-hover mb-0" id="table">
                             <thead class="table-light">
                             <tr>
                                 <th class="ps-4">
@@ -245,13 +245,13 @@
                                                     onclick="loadModalContent('{% url 'responsable_area_edit' responsable.id %}', 'Editar Asignación')"
                                                     class="btn btn-outline-warning"
                                                     data-bs-toggle="tooltip"
-                                                    title="Editar asignación">
+                                                    title="Eliminar asignación">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             {% if responsable.activo %}
                                                 <form method="post"
                                                       action="{% url 'responsable_area_delete' responsable.id %}"
-                                                      onsubmit="return confirmAction('¿Desactivar esta asignación?')"
+                                                      onsubmit="return confirmAction('¿Eliminar esta asignación?')"
                                                       class="d-inline">
                                                     {% csrf_token %}
                                                     <button type="submit"
@@ -361,75 +361,6 @@
             </div>
         </div>
 
-        <!-- Información Adicional -->
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h6 class="mb-0">
-                            <i class="bi bi-info-circle-fill"></i> Información Importante
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle text-success me-2"></i>
-                                Un usuario puede ser responsable de múltiples áreas
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle text-success me-2"></i>
-                                Un área puede tener múltiples responsables
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle text-success me-2"></i>
-                                Las asignaciones inactivas no se eliminan
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle text-success me-2"></i>
-                                Puede reactivar asignaciones desactivadas
-                            </li>
-                            <li>
-                                <i class="bi bi-check-circle text-success me-2"></i>
-                                Use filtros para encontrar rápidamente
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0">
-                            <i class="bi bi-lightbulb-fill"></i> Consejos Prácticos
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li class="mb-2">
-                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
-                                Use "Asignación Rápida" para asignaciones simples
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
-                                Revise regularmente áreas sin responsable
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
-                                Mantenga actualizados los datos de usuarios
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
-                                Use filtros combinados para búsquedas precisas
-                            </li>
-                            <li>
-                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
-                                Exporte datos para análisis externos
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 {% endblock %}
 
@@ -439,33 +370,27 @@
     <script type="text/javascript" charset="utf8"
             src="{% static 'js/datatables/dataTables.bootstrap5.min.js' %}"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        $(document).ready(function () {
             // Inicializar DataTables
             $('table').DataTable({
                 "language": {
                     "url": "{% static 'js/datatables/es-ES.json' %}"
                 },
                 "order": [[0, "asc"]],
-                "pageLength": 10,
+                "pageLength": 15,
+                "lengthMenu": [[10, 15, 25, 50, -1], [10, 15, 25, 50, "Todos"]], // Opciones de cantidad de registros
                 "responsive": true,
                 "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
                 "columnDefs": [
                     {"orderable": false, "targets": [6]}
                 ]
             });
-
-            // Mejorar la experiencia de filtros
-            $('#area, #usuario').select2({
-                theme: 'bootstrap-5',
-                placeholder: "Seleccione una opción",
-                allowClear: true
-            });
         });
     </script>
 
     <!-- Select2 CSS y JS -->
 
-    <script src="{% static 'js/select2.min.js' %}"></script>
+{#    <script src="{% static 'js/select2.min.js' %}"></script>#}
 
 
 {% endblock %}
