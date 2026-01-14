@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class LDAP3Backend(BaseBackend):
     """
-    Backend de autenticación personalizado usando ldap3
+    Backend de autenticación usando ldap3
     Solo permite login a usuarios que existan en la base de datos Django
     """
 
