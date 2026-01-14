@@ -10,9 +10,9 @@ urlpatterns = [
     # Incidencias
     path('incidencias/<int:area_id>/', views.tabla_incidencias, name='tabla_incidencias'),
     path('editar/<int:incidencia_id>/<int:area_id>', views.editar_incidencia, name='editar_incidencia'),
+    path('incidencias/exportar/<int:area_id>/', views.exportar_incidencias_docx_view, name='exportar_incidencias_docx'),
 
     # URLs existentes...
-    path('responsables/listar', views.responsables_listar, name='responsables_listar'),
     path('responsables/crear/', views.responsable_area_create, name='responsable_area_create'),
     path('responsables/buscar-crear-usuario/', views.buscar_crear_usuario, name='buscar_crear_usuario'),
     path('responsables/asignacion-rapida/', views.asignacion_rapida, name='asignacion_rapida'),

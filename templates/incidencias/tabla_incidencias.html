@@ -105,9 +105,9 @@
                                         <a href="#" class="btn btn-secondary">
                                             <i class="bi bi-arrow-clockwise"></i> Limpiar
                                         </a>
-                                        <a href="#"
+                                        <a href="{% url 'exportar_incidencias_docx' area_id=area_id %}?fecha_inicio={{ fecha_inicio|date:'Y-m-d' }}&fecha_fin={{ fecha_fin|date:'Y-m-d' }}"
                                            class="btn btn-outline-success">
-                                            <i class="bi bi-download"></i> Exportar CSV
+                                            <i class="bi bi-download"></i> Exportar DOCX
                                         </a>
                                     </div>
                                 </form>
@@ -131,8 +131,9 @@
                             <table id="incidenciasTable" class="table table-bordered">
                                 <thead>
                                 <tr>
+                                    <th>Expte</th>
                                     <th class="text-center">Empleado</th>
-                                    <th>Área</th>
+
                                     {% for dia in dias %}
                                         <th class="text-center">{{ dia|date:"d/m" }}</th>
                                     {% endfor %}
@@ -141,15 +142,22 @@
                                 <tbody>
                                 {% for fila in tabla_datos %}
                                     <tr>
-                                        <td>{{ fila.empleado }}</td>
-                                        <td>{{ fila.area }}</td>
+                                        <td>{{ fila.expte }}</td>
+                                        <td style="width: fit-content">
+                                            <div class="container-fluid">
+                                                <div class="row" style="width: fit-content">
+                                                    {{ fila.empleado }}
+                                                    <small class="text-muted">{{ fila.area }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
                                         {% for dia in fila.dias %}
                                             <td class="text-center estado-cell {% if not dia.tiene_incidencia %}no-registrado{% endif %}">
                                                 <form method="post"
                                                       action="{% url 'editar_incidencia' dia.incidencia_id area_id %}">
                                                     {% csrf_token %}
                                                     <select name="estado" class="form-select"
-                                                            onchange="this.form.submit()">
+                                                            onchange="this.form.submit()" style="width: fit-content">
                                                         {% for estado_obj in opciones_estado %}
                                                             <option value="{{ estado_obj.id }}"
                                                                     {% if dia.estado.id == estado_obj.id %}selected{% endif %}>

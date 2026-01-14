@@ -15,7 +15,10 @@ from .forms import (LDAPAuthenticationForm, ResponsableAreaForm, BuscarCrearUsua
                     AsignacionRapidaForm, UserCreationFlexibleForm, IncidenciaForm, FiltroFechaForm
                     )
 import json
-from .trabajadores import obtener_usuarios_ldap3
+import io
+
+from .export_utils import exportar_incidencias_docx
+from django.utils.text import slugify
 
 
 def login_view(request):
@@ -139,8 +142,8 @@ def responsable_area_list(request):
 
     # Obtener todas las áreas para el filtro
     areas = Area.objects.filter(
-            cod_area=F('unidad_padre')
-        ).order_by('nombre')
+        cod_area=F('unidad_padre')
+    ).order_by('nombre')
 
     # Obtener todos los usuarios que son responsables
     usuarios_responsables = User.objects.filter(
@@ -538,18 +541,9 @@ def gestion_usuario_completa(request, usuario_id=None):
 
 # _____________________________________________________________________________________________________________________
 @login_required
-def responsables_listar(request):
-    responsables = ResponsableArea.objects.all().order_by('usuario__first_name')
-    context = {
-        'responsables': responsables,
-    }
-    return render(request, 'responsable_area/responsables_area.html', context)
-
-
-@login_required
 def tabla_incidencias(request, area_id):
     # Verificar si el usuario es responsable de algún área
-    area_responsable = ResponsableArea.objects.get(usuario=request.user,activo=True,area__id=area_id)
+    area_responsable = ResponsableArea.objects.get(usuario=request.user, activo=True, area__id=area_id)
 
     areas_hijas = Area.objects.filter(unidad_padre=Area.objects.get(pk=area_id).cod_area)
 
@@ -587,11 +581,11 @@ def tabla_incidencias(request, area_id):
         # Obteniendo todas las áreas que pertenecen a una misma área padre.
 
     # Obtener incidencias según permisos
-
     incidencias_qs = Incidencia.objects.filter(
         area=area_responsable.area,
         fecha_asistencia__range=[fecha_inicio, fecha_fin])
     trabajadores = Trabajador.objects.filter(area=area_responsable.area)
+
     for area in areas_hijas:
         incidencias_qs = incidencias_qs.union(Incidencia.objects.filter(
             area=area,
@@ -624,6 +618,7 @@ def tabla_incidencias(request, area_id):
         empleado_key = f"{incidencia.trabajador.nombre} {incidencia.trabajador.apellidos}"
         if empleado_key not in empleados_data:
             empleados_data[empleado_key] = {
+                'expte': incidencia.trabajador.expte,
                 'trabajador': incidencia.trabajador.nombre + ' ' + incidencia.trabajador.apellidos,
                 'area': incidencia.area.nombre,
                 'incidencias': {}
@@ -637,6 +632,7 @@ def tabla_incidencias(request, area_id):
     tabla_datos = []
     for empleado_key, datos in empleados_data.items():
         fila = {
+            'expte': datos['expte'],
             'empleado': datos['trabajador'],
             'area': datos['area'],
             'dias': []
@@ -720,3 +716,150 @@ def editar_incidencia(request, incidencia_id, area_id):
     #         return redirect('tabla_incidencias',area_id=area_id)
     #
     # return redirect('tabla_incidencias',area_id=area_id)
+
+
+# Agregar estos imports al inicio del archivo views.py
+
+
+# Agregar esta vista después de la función tabla_incidencias
+
+@login_required
+def exportar_incidencias_docx_view(request, area_id):
+    """Vista para exportar incidencias a DOCX con formato específico"""
+    # Verificar permisos
+    area_responsable = ResponsableArea.objects.get(
+        usuario=request.user,
+        activo=True,
+        area__id=area_id
+    )
+
+    if not area_responsable and not request.user.is_superuser:
+        return HttpResponse('No tienes permisos para exportar estas incidencias', status=403)
+
+    # Obtener parámetros de filtro
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
+
+    # Procesar fechas (similar a tabla_incidencias)
+    if fecha_inicio_str and fecha_fin_str:
+        try:
+            fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            hoy = timezone.now().date()
+            fecha_inicio = hoy.replace(day=1)
+            fecha_fin = hoy
+    else:
+        hoy = timezone.now().date()
+        fecha_inicio = hoy.replace(day=1)
+        fecha_fin = hoy
+
+    # Obtener áreas hijas
+    areas_hijas = Area.objects.filter(
+        unidad_padre=Area.objects.get(pk=area_id).cod_area
+    )
+
+    # Obtener incidencias
+    incidencias_qs = Incidencia.objects.filter(
+        area=area_responsable.area,
+        fecha_asistencia__range=[fecha_inicio, fecha_fin]
+    )
+
+    for area in areas_hijas:
+        incidencias_qs = incidencias_qs.union(
+            Incidencia.objects.filter(
+                area=area,
+                fecha_asistencia__range=[fecha_inicio, fecha_fin]
+            )
+        )
+
+    # Generar lista de días
+    dias = []
+    current_date = fecha_inicio
+    while current_date <= fecha_fin:
+        dias.append(current_date)
+        current_date += timedelta(days=1)
+
+    # Preparar datos para la tabla (INCLUYENDO EXPEDIENTE)
+    empleados_data = {}
+    for incidencia in incidencias_qs:
+        empleado_key = f"{incidencia.trabajador.nombre} {incidencia.trabajador.apellidos}"
+        if empleado_key not in empleados_data:
+            empleados_data[empleado_key] = {
+                'expte': incidencia.trabajador.expte,
+                'trabajador': f"{incidencia.trabajador.nombre} {incidencia.trabajador.apellidos}",
+                'area': incidencia.area.nombre,
+                'incidencias': {}
+            }
+        empleados_data[empleado_key]['incidencias'][incidencia.fecha_asistencia] = {
+            'id': incidencia.id,
+            'estado': incidencia.estado
+        }
+
+    # Preparar datos para la tabla (INCLUYENDO EXPEDIENTE)
+    tabla_datos = []
+    for empleado_key, datos in empleados_data.items():
+        fila = {
+            'expte': datos['expte'],
+            'empleado': datos['trabajador'],
+            'area': datos['area'],
+            'dias': []
+        }
+
+        for dia in dias:
+            incidencia_dia = datos['incidencias'].get(dia)
+            if incidencia_dia:
+                fila['dias'].append({
+                    'fecha': dia,
+                    'incidencia_id': incidencia_dia['id'],
+                    'estado': incidencia_dia['estado'],
+                    'tiene_incidencia': True
+                })
+            else:
+                fila['dias'].append({
+                    'fecha': dia,
+                    'incidencia_id': None,
+                    'estado': 'No registrado',
+                    'tiene_incidencia': False
+                })
+
+        tabla_datos.append(fila)
+
+    # Obtener mes actual para el formato
+    meses_es = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+    mes_actual = meses_es[fecha_inicio.month - 1]
+
+    # Crear documento DOCX con el nuevo formato
+    doc = exportar_incidencias_docx(
+        tabla_datos=tabla_datos,
+        dias=dias,
+        area_responsable=area_responsable,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        mes_actual=mes_actual,
+        areas_hijas=areas_hijas
+    )
+
+    # Generar nombre de archivo
+    nombre_archivo = f"incidencias_{slugify(area_responsable.area.nombre)}"
+
+    # Guardar en buffer
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    # Crear respuesta
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+
+
+    response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}.docx"'
+    response["Content-Encoding"] = "UTF-8"
+
+    # Devolver respuesta
+    return response

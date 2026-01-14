@@ -61,6 +61,7 @@ class ResponsableArea(models.Model):
 
 class Trabajador(models.Model):
     ci = models.CharField(max_length=11, db_column='CI')
+    expte = models.CharField(max_length=6, db_column='No_Expte', default='00000')
     nombre = models.CharField(max_length=100, db_column='Nombre')
     apellidos = models.CharField(max_length=150, db_column='Apellidos')
     es_baja = models.BooleanField(db_column='Baja')

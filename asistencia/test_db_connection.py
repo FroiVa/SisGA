@@ -41,37 +41,14 @@ def coneccion(sql):
         print(f"❌ Error SQL Server: {e}")
     return datos
 
-def get_areas():
-    areas = coneccion("SELECT Id_Direccion, Desc_Direccion, GrupoNomina FROM RH_Unidades_Organizativas;")
-    for area in areas:
-        area, creado = Area.objects.update_or_create(
-            cod_area=area[0],
-            defaults={
-                'nombre': area[1],
-                'unidad_padre': area[2],
-            }
-        )
-        if creado:
-            resultados['creados'] += 1
-            print(f"✅ CREADO: {area.cod_area} (Nombre: {area.nombre})")
-        else:
-            resultados['actualizados'] += 1
-            print(f"🔄 ACTUALIZADO: {area.cod_area} (Nombre: {area.nombre})")
-
-# def get_trabajadores():
-#
-#     trabajadores = coneccion("SELECT No_CI, Nombre, Apellido_1, Apellido_2, Id_Direccion, Baja FROM Empleados_Gral where Baja=0;")
-#
-#     for trabajador in trabajadores:
-#         area = Area.objects.get(cod_area=trabajador[4])
-#
-#         trabajador, creado = Trabajador.objects.update_or_create(
-#             ci=trabajador[0],
+# def get_areas():
+#     areas = coneccion("SELECT Id_Direccion, Desc_Direccion, GrupoNomina FROM RH_Unidades_Organizativas;")
+#     for area in areas:
+#         area, creado = Area.objects.update_or_create(
+#             cod_area=area[0],
 #             defaults={
-#                 'nombre': trabajador[1],
-#                 'apellidos': trabajador[2] + " " + trabajador[3],
-#                 'area': area,
-#                 'es_baja': trabajador[5],
+#                 'nombre': area[1],
+#                 'unidad_padre': area[2],
 #             }
 #         )
 #         if creado:
@@ -80,6 +57,30 @@ def get_areas():
 #         else:
 #             resultados['actualizados'] += 1
 #             print(f"🔄 ACTUALIZADO: {area.cod_area} (Nombre: {area.nombre})")
+
+def get_trabajadores():
+
+    trabajadores = coneccion("SELECT Id_Expediente, No_CI, Nombre, Apellido_1, Apellido_2, Id_Direccion, Baja FROM Empleados_Gral where Baja=0;")
+
+    for trabajador in trabajadores:
+        area = Area.objects.get(cod_area=trabajador[5])
+
+        trabajador, creado = Trabajador.objects.update_or_create(
+            ci=trabajador[1],
+            defaults={
+                'expte': trabajador[0],
+                'nombre': trabajador[2],
+                'apellidos': trabajador[3] + " " + trabajador[4],
+                'area': area,
+                'es_baja': trabajador[6],
+            }
+        )
+        if creado:
+            resultados['creados'] += 1
+            print(f"✅ CREADO: {trabajador.expte} (Nombre: {trabajador.nombre} {trabajador.apellidos})")
+        else:
+            resultados['actualizados'] += 1
+            print(f"🔄 ACTUALIZADO: {trabajador.expte} (Nombre: {trabajador.nombre} {trabajador.apellidos})")
 #
 # def get_estados():
 #     estados = coneccion("SELECT Desc_Clave, Id_Clave FROM RH_Claves_Ausencias;")
@@ -95,7 +96,7 @@ def get_areas():
 #         else:
 #             resultados['actualizados'] += 1
 #             print(f"🔄 ACTUALIZADO: {estado.clave} (Clave_Id: {estado.clave_id})")
-#
+
 
 if __name__ == '__main__':
-    get_areas()
+    get_trabajadores()
