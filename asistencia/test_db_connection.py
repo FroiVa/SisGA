@@ -41,22 +41,22 @@ def coneccion(sql):
         print(f"❌ Error SQL Server: {e}")
     return datos
 
-# def get_areas():
-#     areas = coneccion("SELECT Id_Direccion, Desc_Direccion, GrupoNomina FROM RH_Unidades_Organizativas;")
-#     for area in areas:
-#         area, creado = Area.objects.update_or_create(
-#             cod_area=area[0],
-#             defaults={
-#                 'nombre': area[1],
-#                 'unidad_padre': area[2],
-#             }
-#         )
-#         if creado:
-#             resultados['creados'] += 1
-#             print(f"✅ CREADO: {area.cod_area} (Nombre: {area.nombre})")
-#         else:
-#             resultados['actualizados'] += 1
-#             print(f"🔄 ACTUALIZADO: {area.cod_area} (Nombre: {area.nombre})")
+def get_areas():
+    areas = coneccion("SELECT Id_Direccion, Desc_Direccion, GrupoNomina FROM RH_Unidades_Organizativas;")
+    for area in areas:
+        area, creado = Area.objects.update_or_create(
+            cod_area=area[0],
+            defaults={
+                'nombre': area[1],
+                'unidad_padre': area[2],
+            }
+        )
+        if creado:
+            resultados['creados'] += 1
+            print(f"✅ CREADO: {area.cod_area} (Nombre: {area.nombre})")
+        else:
+            resultados['actualizados'] += 1
+            print(f"🔄 ACTUALIZADO: {area.cod_area} (Nombre: {area.nombre})")
 
 def get_trabajadores():
 
@@ -81,22 +81,24 @@ def get_trabajadores():
         else:
             resultados['actualizados'] += 1
             print(f"🔄 ACTUALIZADO: {trabajador.expte} (Nombre: {trabajador.nombre} {trabajador.apellidos})")
-#
-# def get_estados():
-#     estados = coneccion("SELECT Desc_Clave, Id_Clave FROM RH_Claves_Ausencias;")
-#
-#     for estado in estados:
-#         estado, creado = Estado.objects.update_or_create(
-#             clave=estado[0],
-#             clave_id=estado[1],
-#         )
-#         if creado:
-#             resultados['creados'] += 1
-#             print(f"✅ CREADO: {estado.clave} (Clave_Id: {estado.clave_id})")
-#         else:
-#             resultados['actualizados'] += 1
-#             print(f"🔄 ACTUALIZADO: {estado.clave} (Clave_Id: {estado.clave_id})")
+
+def get_estados():
+    estados = coneccion("SELECT Desc_Clave, Id_Clave FROM RH_Claves_Ausencias;")
+
+    for estado in estados:
+        estado, creado = Estado.objects.update_or_create(
+            clave=estado[0],
+            clave_id=estado[1],
+        )
+        if creado:
+            resultados['creados'] += 1
+            print(f"✅ CREADO: {estado.clave} (Clave_Id: {estado.clave_id})")
+        else:
+            resultados['actualizados'] += 1
+            print(f"🔄 ACTUALIZADO: {estado.clave} (Clave_Id: {estado.clave_id})")
 
 
 if __name__ == '__main__':
+    get_areas()
     get_trabajadores()
+    get_estados()
